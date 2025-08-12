@@ -6,7 +6,7 @@ export default function SuccessPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cream via-white to-cambridge-blue/10 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 flex items-center justify-center px-4">
       <Card className="max-w-md w-full shadow-2xl border-0 bg-white/95 backdrop-blur overflow-hidden">
         <CardHeader className="bg-gradient-to-r from-cambridge-blue to-cerulean text-white">
           <CardTitle className="text-3xl text-center font-bold">Thank You!</CardTitle>

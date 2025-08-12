@@ -56,7 +56,7 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-cream via-white to-cambridge-blue/10 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 flex items-center justify-center">
         <div className="text-lg text-gunmetal">Loading admin dashboard...</div>
       </div>
     );
@@ -64,14 +64,14 @@ export default function AdminPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-cream via-white to-cambridge-blue/10 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 flex items-center justify-center">
         <div className="text-lg text-red-600">{error}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cream via-white to-cambridge-blue/10 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 py-8 px-4">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold text-gunmetal">Admin Dashboard</h1>

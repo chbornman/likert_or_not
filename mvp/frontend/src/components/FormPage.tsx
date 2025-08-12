@@ -347,7 +347,7 @@ export default function FormPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-cream via-white to-cambridge-blue/10 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 flex items-center justify-center">
         <div className="text-lg text-gunmetal">Loading form...</div>
       </div>
     );
@@ -355,7 +355,7 @@ export default function FormPage() {
 
   if (!formData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-cream via-white to-cambridge-blue/10 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 flex items-center justify-center">
         <div className="text-lg text-red-600">{error}</div>
       </div>
     );
@@ -365,7 +365,7 @@ export default function FormPage() {
   const progressPercentage = currentSection === -1 ? 0 : ((currentSection + 1) / (totalSections + 1)) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cream via-white to-cambridge-blue/10 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {showRestoredMessage && (
           <div className="mb-4 p-4 bg-cambridge-blue/20 border border-cambridge-blue rounded-lg flex items-center justify-between">
