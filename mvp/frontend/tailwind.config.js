@@ -18,7 +18,7 @@ export default {
     },
     extend: {
       colors: {
-        'rose-quartz': '#baa7b0',
+        'rose-quartz': '#A34242',
         'cerulean': '#086788',
         'gunmetal': '#142421',
         'cream': '#f0f0e0',

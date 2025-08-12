@@ -1,6 +1,4 @@
 # Production Docker Compose for Coolify deployment
-version: '3.8'
-
 services:
   app:
     build:
@@ -19,7 +17,7 @@ services:
       - type: bind
         source: ./data
         target: /app/data
-        is_directory: true  # Coolify will create this directory
+        is_directory: true # Coolify will create this directory
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/form"]

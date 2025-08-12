@@ -4,16 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { FormData, AnswerInput } from '@/types';
 
 const likertOptions = [
-  { value: 1, label: 'Strongly Disagree' },
-  { value: 2, label: 'Disagree' },
-  { value: 3, label: 'Neutral' },
-  { value: 4, label: 'Agree' },
-  { value: 5, label: 'Strongly Agree' },
+  { value: 1, label: 'Strongly Disagree', shortLabel: 'Strongly Disagree' },
+  { value: 2, label: 'Disagree', shortLabel: 'Disagree' },
+  { value: 3, label: 'Neutral', shortLabel: 'Neutral' },
+  { value: 4, label: 'Agree', shortLabel: 'Agree' },
+  { value: 5, label: 'Strongly Agree', shortLabel: 'Strongly Agree' },
 ];
 
 const questionSections = [
@@ -41,6 +40,7 @@ export default function FormPage() {
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const [showRestoredMessage, setShowRestoredMessage] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -49,15 +49,30 @@ export default function FormPage() {
   // Save to local storage whenever form data changes
   useEffect(() => {
     if (!loading && formData) {
-      const dataToSave = {
-        name,
-        email,
-        currentSection,
-        answers: Array.from(answers.entries()),
-        savedAt: new Date().toISOString(),
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-      setLastSaved(new Date());
+      // Only save if user has actually entered some data
+      const hasData = name.trim() || email.trim() || 
+        Array.from(answers.values()).some(a => a.likert_value !== null || a.comment);
+      
+      if (hasData) {
+        // Show saving indicator
+        setIsSaving(true);
+        
+        // Save data
+        const dataToSave = {
+          name,
+          email,
+          currentSection,
+          answers: Array.from(answers.entries()),
+          savedAt: new Date().toISOString(),
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+        
+        // Ensure saving indicator shows for at least 250ms
+        setTimeout(() => {
+          setIsSaving(false);
+          setLastSaved(new Date());
+        }, 250);
+      }
     }
   }, [name, email, answers, currentSection, loading, formData]);
 
@@ -356,12 +371,16 @@ export default function FormPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowRestoredMessage(false)}
-                className="text-sm px-3 py-1 text-gunmetal/70 hover:text-gunmetal"
+                className="text-sm px-3 py-1 bg-cerulean hover:bg-cerulean/90 text-white rounded-md transition-colors font-medium"
               >
                 Continue
               </button>
               <button
-                onClick={clearSavedProgress}
+                onClick={() => {
+                  if (confirm('Are you sure you want to start fresh? This will clear all your saved progress.')) {
+                    clearSavedProgress();
+                  }
+                }}
                 className="text-sm px-3 py-1 bg-rose-quartz/80 hover:bg-rose-quartz text-white rounded-md transition-colors"
               >
                 Start Fresh
@@ -373,12 +392,26 @@ export default function FormPage() {
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-3xl font-bold text-gunmetal">{formData.title}</h1>
             <div className="flex items-center gap-4">
-              {lastSaved && (
-                <span className="text-xs text-gunmetal/50 flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Auto-saved
+              {(isSaving || lastSaved) && (
+                <span className={`text-xs text-gunmetal/50 flex items-center gap-1 transition-all duration-300 ${
+                  isSaving ? 'opacity-100' : 'opacity-70'
+                }`}>
+                  {isSaving ? (
+                    <>
+                      <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="animate-pulse">Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3 h-3 text-cambridge-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Saved</span>
+                    </>
+                  )}
                 </span>
               )}
               <span className="text-sm text-gunmetal/70">
@@ -408,6 +441,27 @@ export default function FormPage() {
           <CardContent className="pt-8">
             {currentSection === -1 ? (
               <div className="space-y-6">
+                {/* Time estimate section */}
+                <div className="bg-gradient-to-r from-cambridge-blue/10 to-cerulean/10 rounded-lg p-4 border border-cambridge-blue/20">
+                  <div className="flex items-start gap-3">
+                    <svg className="w-5 h-5 text-cerulean mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <h3 className="font-semibold text-gunmetal text-sm">Estimated Time to Complete</h3>
+                      <p className="text-gunmetal/70 text-sm mt-1">
+                        Approximately {Math.ceil((formData.questions.length * 30) / 60)} minutes
+                        <span className="text-xs ml-2 text-gunmetal/50">
+                          ({formData.questions.length} questions)
+                        </span>
+                      </p>
+                      <p className="text-xs text-gunmetal/50 mt-2">
+                        Your progress is automatically saved as you go.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
                 <div>
                   <Label htmlFor="name" className="text-gunmetal font-semibold">
                     Name <span className="text-rose-quartz font-bold">*</span>
@@ -495,28 +549,50 @@ export default function FormPage() {
                       </div>
                     )}
                     
-                    <RadioGroup
-                      value={answers.get(question.id)?.likert_value?.toString() || ''}
-                      onValueChange={(value) => handleLikertChange(question.id, value)}
-                      className="flex flex-col sm:flex-row sm:gap-4 gap-2 ml-11"
-                    >
-                      {likertOptions.map((option) => (
-                        <Label
-                          key={option.value}
-                          htmlFor={`q${question.id}-${option.value}`}
-                          className="flex items-center space-x-2 p-2 rounded-lg hover:bg-cambridge-blue/10 transition-colors cursor-pointer"
-                        >
-                          <RadioGroupItem 
-                            value={option.value.toString()} 
-                            id={`q${question.id}-${option.value}`}
-                            className="border-2 border-cerulean text-cerulean"
-                          />
-                          <span className="text-sm text-gunmetal/80 hover:text-gunmetal select-none">
-                            {option.value} - {option.label}
-                          </span>
-                        </Label>
-                      ))}
-                    </RadioGroup>
+                    <div className="ml-0 sm:ml-11">
+                      <div className="flex justify-center">
+                        <div className="inline-flex flex-col sm:flex-row rounded-xl bg-cream/30 p-1 shadow-inner w-full sm:w-auto max-w-full">
+                          <div className="flex flex-row gap-0.5 overflow-x-auto sm:overflow-visible">
+                            {likertOptions.map((option, index) => {
+                              const isSelected = answers.get(question.id)?.likert_value === option.value;
+                              const isFirst = index === 0;
+                              const isLast = index === likertOptions.length - 1;
+                              
+                              return (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  onClick={() => handleLikertChange(question.id, option.value.toString())}
+                                  className={`
+                                    relative px-2 sm:px-3 py-2.5 text-[10px] sm:text-xs font-medium transition-all duration-200 flex-1 sm:flex-initial min-w-0
+                                    ${isFirst ? 'rounded-l-lg' : ''}
+                                    ${isLast ? 'rounded-r-lg' : ''}
+                                    ${isSelected 
+                                      ? 'bg-gradient-to-r from-cerulean to-cambridge-blue text-white shadow-lg scale-[1.02] z-10' 
+                                      : 'bg-white/70 text-gunmetal/70 hover:bg-white hover:text-gunmetal hover:shadow-md'
+                                    }
+                                  `}
+                                  aria-label={option.label}
+                                  title={option.label}
+                                >
+                                  <span className="block sm:whitespace-nowrap">
+                                    <span className="hidden sm:inline">{option.label}</span>
+                                    <span className="sm:hidden">
+                                      {option.value === 1 || option.value === 5 ? (
+                                        <span className="block">
+                                          <span className="block">Strongly</span>
+                                          <span className="block">{option.value === 1 ? 'Disagree' : 'Agree'}</span>
+                                        </span>
+                                      ) : option.label}
+                                    </span>
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
                     {question.allow_comment && (
                       <div className="ml-11">
