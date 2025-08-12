@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=sqlite:///app/data/likert_form.db
+      - ADMIN_TOKEN=dev-token-change-in-production
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - NOTIFICATION_EMAIL=${NOTIFICATION_EMAIL:-admin@example.com}
+      - PORT=3000
+      - RUST_LOG=info
+    volumes:
+      - ./data:/app/data
+      - ./backend/src:/app/src:ro
+      - ./migrations:/app/migrations:ro
+    networks:
+      - likert-network
+    command: >
+      sh -c "
+        cargo install cargo-watch &&
+        cargo watch -x run
+      "
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - likert-network
+    command: >
+      sh -c "
+        npm install &&
+        npm run dev -- --host 0.0.0.0
+      "
+
+networks:
+  likert-network:
+    driver: bridge
+
+volumes:
+  data:
