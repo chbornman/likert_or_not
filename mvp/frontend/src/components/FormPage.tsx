@@ -193,7 +193,14 @@ export default function FormPage() {
     }
   };
 
+  const MAX_COMMENT_LENGTH = 500;
+
   const handleCommentChange = (questionId: number, comment: string) => {
+    // Limit comment length
+    if (comment.length > MAX_COMMENT_LENGTH) {
+      return;
+    }
+    
     const current = answers.get(questionId)!;
     setAnswers(new Map(answers.set(questionId, {
       ...current,
@@ -596,9 +603,18 @@ export default function FormPage() {
 
                     {question.allow_comment && (
                       <div className="ml-11">
-                        <Label htmlFor={`comment-${question.id}`} className="text-sm text-gunmetal/70 font-medium">
-                          Comments (optional)
-                        </Label>
+                        <div className="flex items-center justify-between mb-2">
+                          <Label htmlFor={`comment-${question.id}`} className="text-sm text-gunmetal/70 font-medium">
+                            Comments (optional)
+                          </Label>
+                          <span className={`text-xs ${
+                            (answers.get(question.id)?.comment?.length || 0) > MAX_COMMENT_LENGTH * 0.9
+                              ? 'text-rose-quartz font-semibold'
+                              : 'text-gunmetal/50'
+                          }`}>
+                            {answers.get(question.id)?.comment?.length || 0}/{MAX_COMMENT_LENGTH}
+                          </span>
+                        </div>
                         <Textarea
                           id={`comment-${question.id}`}
                           value={answers.get(question.id)?.comment || ''}
@@ -606,6 +622,7 @@ export default function FormPage() {
                           placeholder="Add any additional context or feedback..."
                           className="mt-2 border-cambridge-blue/30 focus:border-cerulean bg-white/80"
                           rows={3}
+                          maxLength={MAX_COMMENT_LENGTH}
                         />
                       </div>
                     )}
