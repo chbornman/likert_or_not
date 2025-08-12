@@ -56,49 +56,54 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading admin dashboard...</div>
+      <div className="min-h-screen bg-gradient-to-br from-cream via-white to-cambridge-blue/10 flex items-center justify-center">
+        <div className="text-lg text-gunmetal">Loading admin dashboard...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-cream via-white to-cambridge-blue/10 flex items-center justify-center">
         <div className="text-lg text-red-600">{error}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-cream via-white to-cambridge-blue/10 py-8 px-4">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <Button onClick={handleExport}>Export to CSV</Button>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold text-gunmetal">Admin Dashboard</h1>
+          <Button 
+            onClick={handleExport}
+            className="bg-gradient-to-r from-cerulean to-cambridge-blue hover:from-cerulean/90 hover:to-cambridge-blue/90 text-white font-semibold px-6 py-3 rounded-lg transition-all shadow-lg"
+          >
+            Export to CSV
+          </Button>
         </div>
 
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader>
+            <Card className="shadow-xl border-0 bg-white/95 backdrop-blur overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-cerulean to-cambridge-blue text-white">
                 <CardTitle>Total Responses</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{stats.total_responses}</div>
+              <CardContent className="pt-6">
+                <div className="text-4xl font-bold text-gunmetal">{stats.total_responses}</div>
               </CardContent>
             </Card>
 
-            <Card className="md:col-span-2">
-              <CardHeader>
+            <Card className="md:col-span-2 shadow-xl border-0 bg-white/95 backdrop-blur overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-cambridge-blue to-cerulean text-white">
                 <CardTitle>Recent Submissions</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
+              <CardContent className="pt-4">
+                <div className="space-y-3">
                   {stats.recent_responses.map((r) => (
-                    <div key={r.id} className="flex justify-between text-sm">
-                      <span>{r.respondent_name}</span>
-                      <span className="text-gray-500">
+                    <div key={r.id} className="flex justify-between text-sm p-2 rounded-lg hover:bg-cambridge-blue/10 transition-colors">
+                      <span className="font-medium text-gunmetal">{r.respondent_name}</span>
+                      <span className="text-gunmetal/60">
                         {new Date(r.submitted_at).toLocaleDateString()}
                       </span>
                     </div>
@@ -109,31 +114,31 @@ export default function AdminPage() {
           </div>
         )}
 
-        <Card>
-          <CardHeader>
+        <Card className="shadow-xl border-0 bg-white/95 backdrop-blur">
+          <CardHeader className="bg-gradient-to-r from-rose-quartz to-cambridge-blue text-white">
             <CardTitle>Average Scores by Question</CardTitle>
-            <CardDescription>Scale: 1 (Strongly Disagree) to 5 (Strongly Agree)</CardDescription>
+            <CardDescription className="text-cream/90">Scale: 1 (Strongly Disagree) to 5 (Strongly Agree)</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="pt-6">
+            <div className="space-y-4">
               {stats?.average_scores.map((score, idx) => (
-                <div key={idx} className="space-y-1">
+                <div key={idx} className="space-y-2 p-3 rounded-lg bg-gradient-to-r from-cream/30 to-cambridge-blue/10">
                   <div className="flex justify-between items-start">
-                    <span className="text-sm flex-1 mr-4">
-                      {idx + 1}. {score.question_text}
+                    <span className="text-sm flex-1 mr-4 text-gunmetal">
+                      <span className="font-bold text-cerulean">{idx + 1}.</span> {score.question_text}
                     </span>
                     <div className="text-right">
-                      <span className="font-semibold">
+                      <span className="font-bold text-lg text-gunmetal">
                         {score.average_score.toFixed(2)}
                       </span>
-                      <span className="text-xs text-gray-500 ml-2">
+                      <span className="text-xs text-gunmetal/60 ml-2">
                         ({score.response_count} responses)
                       </span>
                     </div>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-rose-quartz/20 rounded-full h-3 overflow-hidden">
                     <div
-                      className="bg-blue-600 h-2 rounded-full"
+                      className="bg-gradient-to-r from-cerulean to-cambridge-blue h-3 rounded-full transition-all duration-500"
                       style={{ width: `${(score.average_score / 5) * 100}%` }}
                     />
                   </div>
@@ -143,25 +148,25 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="shadow-xl border-0 bg-white/95 backdrop-blur">
+          <CardHeader className="bg-gradient-to-r from-gunmetal to-cerulean text-white">
             <CardTitle>All Responses</CardTitle>
-            <CardDescription>Click on a response to view details</CardDescription>
+            <CardDescription className="text-cream/90">Click on a response to view details</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
+          <CardContent className="pt-6">
+            <div className="space-y-3">
               {responses.map((r) => (
                 <div
                   key={r.response.id}
-                  className="p-4 border rounded-lg cursor-pointer hover:bg-gray-50"
+                  className="p-4 border-2 border-cambridge-blue/20 rounded-xl cursor-pointer hover:bg-gradient-to-r hover:from-cambridge-blue/10 hover:to-cerulean/10 transition-all hover:border-cerulean/40 hover:shadow-lg"
                   onClick={() => setSelectedResponse(r)}
                 >
                   <div className="flex justify-between">
                     <div>
-                      <div className="font-medium">{r.response.respondent_name}</div>
-                      <div className="text-sm text-gray-500">{r.response.respondent_email}</div>
+                      <div className="font-semibold text-gunmetal">{r.response.respondent_name}</div>
+                      <div className="text-sm text-gunmetal/60">{r.response.respondent_email}</div>
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-gunmetal/60">
                       {new Date(r.response.submitted_at).toLocaleString()}
                     </div>
                   </div>
@@ -172,34 +177,32 @@ export default function AdminPage() {
         </Card>
 
         {selectedResponse && (
-          <Card>
-            <CardHeader>
+          <Card className="shadow-xl border-0 bg-white/95 backdrop-blur">
+            <CardHeader className="bg-gradient-to-r from-rose-quartz to-cerulean text-white">
               <CardTitle>Response Details</CardTitle>
-              <CardDescription>
+              <CardDescription className="text-cream/90">
                 {selectedResponse.response.respondent_name} - {selectedResponse.response.respondent_email}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <Button
-                variant="outline"
-                size="sm"
                 onClick={() => setSelectedResponse(null)}
-                className="mb-4"
+                className="mb-6 bg-rose-quartz hover:bg-rose-quartz/80 text-white font-semibold px-4 py-2 rounded-lg transition-all"
               >
                 Close Details
               </Button>
               <div className="space-y-4">
                 {selectedResponse.answers.map((answer, idx) => (
-                  <div key={idx} className="border-b pb-3">
-                    <div className="font-medium text-sm mb-1">
-                      {idx + 1}. {answer.question_text}
+                  <div key={idx} className="border-b border-cambridge-blue/20 pb-4">
+                    <div className="font-medium text-gunmetal mb-2">
+                      <span className="text-cerulean font-bold">{idx + 1}.</span> {answer.question_text}
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm">
-                        Score: <span className="font-semibold">{answer.likert_value || 'N/A'}</span>
+                    <div className="flex items-center gap-4 ml-6">
+                      <span className="text-sm bg-cambridge-blue/20 px-3 py-1 rounded-full">
+                        Score: <span className="font-bold text-gunmetal">{answer.likert_value || 'N/A'}</span>
                       </span>
                       {answer.comment && (
-                        <span className="text-sm text-gray-600 italic">
+                        <span className="text-sm text-gunmetal/70 italic bg-cream/30 px-3 py-1 rounded-lg">
                           Comment: {answer.comment}
                         </span>
                       )}

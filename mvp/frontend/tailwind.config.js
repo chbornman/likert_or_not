@@ -18,6 +18,11 @@ export default {
     },
     extend: {
       colors: {
+        'rose-quartz': '#baa7b0',
+        'cerulean': '#086788',
+        'gunmetal': '#142421',
+        'cream': '#f0f0e0',
+        'cambridge-blue': '#7fb685',
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
