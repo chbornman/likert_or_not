@@ -42,8 +42,8 @@ COPY --from=backend-builder /app/migrations /app/migrations
 # Copy frontend build
 COPY --from=frontend-builder /app/dist /app/frontend/dist
 
-# Create data directory for SQLite
-RUN mkdir -p /app/data
+# Create data directory for SQLite with proper permissions
+RUN mkdir -p /app/data && chmod 777 /app/data
 
 ENV DATABASE_URL=sqlite:///app/data/likert_form.db
 ENV PORT=3000

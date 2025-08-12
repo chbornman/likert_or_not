@@ -40,21 +40,34 @@ docker-compose -f docker-compose.dev.yml up
 
 ### Production Deployment with Coolify
 
-1. In Coolify, create a new service and select "Docker Compose"
+1. In Coolify, create a new **Application** (not Docker Compose)
 
-2. Point to your repository and the `mvp` folder
+2. Configure the build:
+   - Source: Your GitHub repository
+   - Branch: main
+   - Build Pack: **Dockerfile**
+   - Base Directory: `/mvp` (if mvp is a subfolder)
+   - Dockerfile Location: `./Dockerfile`
 
-3. Set the following environment variables in Coolify:
-   - `ADMIN_TOKEN`: A secure random token for admin access
-   - `RESEND_API_KEY`: Your Resend API key (optional)
-   - `NOTIFICATION_EMAIL`: Email to receive notifications
-   - `PORT`: Port for the application (default: 3000)
+3. **CRITICAL: Add Persistent Storage**
+   - Go to the **Storages** tab
+   - Click "Add Storage"
+   - Mount Path: `/app/data`
+   - This is REQUIRED for the SQLite database to persist!
 
-4. Coolify will use the `docker-compose.yml` file automatically
+4. Set environment variables in the **Environment Variables** tab:
+   - `ADMIN_TOKEN`: A secure random token (MUST CHANGE FROM DEFAULT!)
+   - `RESEND_API_KEY`: Your Resend API key (optional, for email notifications)
+   - `NOTIFICATION_EMAIL`: Email to receive form submissions (optional)
+   - `DATABASE_URL`: `sqlite:///app/data/likert_form.db`
 
-5. After deployment, access:
+5. Deploy the application
+
+6. After deployment, access:
    - Form: https://your-domain.com
    - Admin: https://your-domain.com/admin?token=YOUR_ADMIN_TOKEN
+
+**Note:** Without persistent storage, your database will be lost on every redeploy!
 
 ## Local Development (Without Docker)
 
