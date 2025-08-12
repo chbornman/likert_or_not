@@ -16,15 +16,9 @@ services:
       - RUST_LOG=info
     volumes:
       - ./data:/app/data
-      - ./backend/src:/app/src:ro
-      - ./migrations:/app/migrations:ro
     networks:
       - likert-network
-    command: >
-      sh -c "
-        cargo install cargo-watch &&
-        cargo watch -x run
-      "
+    command: ./likert-form-mvp
 
   frontend:
     image: node:20-alpine

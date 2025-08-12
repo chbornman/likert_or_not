@@ -7,7 +7,7 @@ pub async fn init_db(database_url: &str) -> Result<SqlitePool> {
         .connect(database_url)
         .await?;
 
-    sqlx::migrate!("../migrations")
+    sqlx::migrate!("./migrations")
         .run(&pool)
         .await?;
 
