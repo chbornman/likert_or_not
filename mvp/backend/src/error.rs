@@ -19,9 +19,6 @@ pub enum AppError {
     
     #[error("Internal server error")]
     InternalServerError,
-    
-    #[error("Email error: {0}")]
-    Email(String),
 }
 
 impl IntoResponse for AppError {
@@ -39,10 +36,6 @@ impl IntoResponse for AppError {
             }
             AppError::InternalServerError => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
-            }
-            AppError::Email(ref msg) => {
-                tracing::error!("Email error: {}", msg);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to send notification")
             }
         };
 

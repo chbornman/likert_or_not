@@ -42,7 +42,6 @@ export default function FormPage() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [draggingQuestion, setDraggingQuestion] = useState<number | null>(null);
-  const [dragStartX, setDragStartX] = useState<number>(0);
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -80,6 +79,7 @@ export default function FormPage() {
 
   useEffect(() => {
     fetchForm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchForm = async () => {
@@ -367,7 +367,7 @@ export default function FormPage() {
   const progressPercentage = currentSection === -1 ? 0 : ((currentSection + 1) / (totalSections + 1)) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 py-0 sm:py-8 px-0 sm:px-4">
+    <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 py-4 sm:py-8 px-0 sm:px-4">
       <div className="max-w-4xl mx-auto">
         {showRestoredMessage && (
           <div className="mb-4 p-4 mx-4 sm:mx-0 bg-cambridge-blue/20 border border-cambridge-blue rounded-lg flex items-center justify-between">
@@ -565,8 +565,7 @@ export default function FormPage() {
                         <div 
                           className="flex flex-row sm:inline-flex sm:flex-row rounded-xl sm:rounded-2xl bg-cream/30 p-1.5 sm:p-2 shadow-inner w-full sm:w-auto select-none"
                           onMouseDown={(e) => {
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            setDragStartX(e.clientX);
+                            e.currentTarget.getBoundingClientRect();
                             setDraggingQuestion(question.id);
                           }}
                           onMouseMove={(e) => {
@@ -590,8 +589,7 @@ export default function FormPage() {
                             setDraggingQuestion(null);
                           }}
                           onTouchStart={(e) => {
-                            const touch = e.touches[0];
-                            setDragStartX(touch.clientX);
+                            e.touches[0];
                             setDraggingQuestion(question.id);
                           }}
                           onTouchMove={(e) => {
@@ -774,9 +772,9 @@ export default function FormPage() {
                     ? 'w-8 h-3 bg-cerulean' 
                     : sectionIdx < currentSection 
                       ? `w-3 h-3 cursor-pointer hover:scale-110 ${
-                          isComplete ? 'bg-cambridge-blue' : 'bg-rose-quartz animate-pulse'
+                          isComplete ? 'bg-rose-quartz' : 'bg-cambridge-blue/50 animate-pulse'
                         }` 
-                      : 'w-2 h-2 bg-rose-quartz/30'
+                      : 'w-2 h-2 bg-cambridge-blue/30'
                 }`}
                 aria-label={`Go to ${sectionIdx === -1 ? 'Personal Information' : questionSections[sectionIdx]?.title || ''}`}
                 title={

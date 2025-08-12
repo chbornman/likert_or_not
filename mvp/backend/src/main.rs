@@ -7,7 +7,6 @@ mod error;
 use axum::{
     Router,
     routing::{get, post},
-    http::StatusCode,
 };
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
@@ -89,6 +88,3 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn health_check() -> StatusCode {
-    StatusCode::OK
-}

@@ -136,7 +136,7 @@ pub async fn export_csv(
     
     let mut wtr = csv::Writer::from_writer(vec![]);
     
-    wtr.write_record(&[
+    wtr.write_record([
         "Response ID",
         "Name",
         "Email",
@@ -206,18 +206,40 @@ pub async fn get_stats(
     let averages = sqlx::query_as::<_, QuestionAverage>(
         r#"
         SELECT 
+            q.id as question_id,
             q.question_text,
+            q.position,
             AVG(CAST(a.likert_value AS REAL)) as average_score,
             COUNT(a.likert_value) as response_count
         FROM questions q
         LEFT JOIN answers a ON q.id = a.question_id
         WHERE a.likert_value IS NOT NULL
-        GROUP BY q.id, q.question_text
+        GROUP BY q.id, q.question_text, q.position
         ORDER BY q.position
         "#
     )
     .fetch_all(&state.db)
     .await?;
+
+    // Get all comments for each question
+    let mut questions_with_comments = Vec::new();
+    for avg in &averages {
+        let comments: Vec<(String,)> = sqlx::query_as(
+            "SELECT comment FROM answers WHERE question_id = ? AND comment IS NOT NULL AND comment != ''"
+        )
+        .bind(avg.question_id)
+        .fetch_all(&state.db)
+        .await?;
+        
+        questions_with_comments.push(QuestionWithComments {
+            question_id: avg.question_id,
+            question_text: avg.question_text.clone(),
+            position: avg.position,
+            average_score: avg.average_score,
+            response_count: avg.response_count,
+            comments: comments.into_iter().map(|(c,)| c).collect(),
+        });
+    }
 
     let recent = sqlx::query_as::<_, Response>(
         "SELECT * FROM responses ORDER BY submitted_at DESC LIMIT 5"
@@ -228,6 +250,7 @@ pub async fn get_stats(
     Ok(Json(Stats {
         total_responses: total.0,
         average_scores: averages,
+        questions_with_comments,
         recent_responses: recent,
     }))
 }
