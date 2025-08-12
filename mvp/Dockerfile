@@ -45,7 +45,7 @@ COPY --from=frontend-builder /app/dist /app/frontend/dist
 # Create data directory for SQLite with proper permissions
 RUN mkdir -p /app/data && chmod 777 /app/data
 
-ENV DATABASE_URL=sqlite:///app/data/likert_form.db
+ENV DATABASE_URL=sqlite:///tmp/likert_form.db
 ENV PORT=3000
 ENV STATIC_DIR=/app/frontend/dist
 
