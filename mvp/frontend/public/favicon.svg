@@ -1,0 +1,20 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="32" height="32" rx="4" fill="#086788"/>
+  
+  <!-- Simplified Likert scale -->
+  <g transform="translate(16, 16)">
+    <!-- Scale line -->
+    <line x1="-10" y1="0" x2="10" y2="0" stroke="#f0f0e0" stroke-width="1.5"/>
+    
+    <!-- Scale points -->
+    <circle cx="-10" cy="0" r="2" fill="#A34242"/>
+    <circle cx="-5" cy="0" r="2" fill="#A34242" opacity="0.6"/>
+    <circle cx="0" cy="0" r="3" fill="#f0f0e0"/>
+    <circle cx="5" cy="0" r="2" fill="#7fb685" opacity="0.7"/>
+    <circle cx="10" cy="0" r="2" fill="#7fb685"/>
+    
+    <!-- Question mark -->
+    <text x="0" y="-6" font-family="Arial, sans-serif" font-size="8" font-weight="bold" text-anchor="middle" fill="#f0f0e0">?</text>
+  </g>
+</svg>

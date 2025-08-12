@@ -1,0 +1,27 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="90" fill="#086788" opacity="0.1"/>
+  
+  <!-- Likert scale representation -->
+  <!-- Five circles representing scale points -->
+  <g transform="translate(100, 100)">
+    <!-- Scale line -->
+    <line x1="-60" y1="0" x2="60" y2="0" stroke="#086788" stroke-width="2"/>
+    
+    <!-- Scale points (from strongly disagree to strongly agree) -->
+    <circle cx="-60" cy="0" r="8" fill="#A34242" opacity="0.9"/>
+    <circle cx="-30" cy="0" r="8" fill="#A34242" opacity="0.6"/>
+    <circle cx="0" cy="0" r="12" fill="#086788"/>
+    <circle cx="30" cy="0" r="8" fill="#7fb685" opacity="0.7"/>
+    <circle cx="60" cy="0" r="8" fill="#7fb685" opacity="1"/>
+    
+    <!-- Question mark above -->
+    <text x="0" y="-35" font-family="Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#086788">?</text>
+    
+    <!-- Checkmark below for selected state -->
+    <path d="M -15 25 L -5 35 L 15 15" stroke="#7fb685" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  
+  <!-- Text below -->
+  <text x="100" y="170" font-family="Arial, sans-serif" font-size="16" font-weight="600" text-anchor="middle" fill="#142421">Likert Or Not</text>
+</svg>

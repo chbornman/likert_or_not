@@ -16,15 +16,15 @@ const likertOptions = [
 ];
 
 const questionSections = [
-  { start: 0, end: 4, title: "Part I: Organizational Leadership" },
-  { start: 4, end: 8, title: "Part II: Strategic Planning & Management" },
+  { start: 0, end: 4, title: "Organizational Leadership" },
+  { start: 4, end: 8, title: "Strategic Planning & Management" },
   { start: 8, end: 12, title: "Leadership & Governance" },
   { start: 12, end: 16, title: "Programming & Operations" },
   { start: 16, end: 20, title: "Fundraising & Financial Management" },
   { start: 20, end: 24, title: "Community Engagement & Advocacy" },
-  { start: 24, end: 30, title: "Part III: Core Values" },
+  { start: 24, end: 30, title: "Core Values" },
   { start: 30, end: 35, title: "Executive Competencies" },
-  { start: 35, end: 40, title: "Part IV: Overall Performance" },
+  { start: 35, end: 40, title: "Overall Performance" },
 ];
 
 const STORAGE_KEY = 'likert-form-progress';
@@ -558,8 +558,8 @@ export default function FormPage() {
                     
                     <div className="ml-0 sm:ml-11">
                       <div className="flex justify-center">
-                        <div className="inline-flex flex-col sm:flex-row rounded-xl bg-cream/30 p-1 shadow-inner w-full sm:w-auto max-w-full">
-                          <div className="flex flex-row gap-0.5 overflow-x-auto sm:overflow-visible">
+                        <div className="inline-flex flex-col sm:flex-row rounded-2xl bg-cream/30 p-2 shadow-inner w-full sm:w-auto max-w-full">
+                          <div className="flex flex-row gap-1 overflow-x-auto sm:overflow-visible">
                             {likertOptions.map((option, index) => {
                               const isSelected = answers.get(question.id)?.likert_value === option.value;
                               const isFirst = index === 0;
@@ -571,14 +571,16 @@ export default function FormPage() {
                                   type="button"
                                   onClick={() => handleLikertChange(question.id, option.value.toString())}
                                   className={`
-                                    relative px-2 sm:px-3 py-2.5 text-[10px] sm:text-xs font-medium transition-all duration-200 flex-1 sm:flex-initial min-w-0
-                                    ${isFirst ? 'rounded-l-lg' : ''}
-                                    ${isLast ? 'rounded-r-lg' : ''}
+                                    relative px-3 sm:px-4 lg:px-5 py-3 lg:py-3.5 text-xs sm:text-sm lg:text-base font-medium flex-1 sm:flex-initial min-w-0 rounded-xl
+                                    transform transition-all duration-300 ease-out
                                     ${isSelected 
-                                      ? 'bg-gradient-to-r from-cerulean to-cambridge-blue text-white shadow-lg scale-[1.02] z-10' 
-                                      : 'bg-white/70 text-gunmetal/70 hover:bg-white hover:text-gunmetal hover:shadow-md'
+                                      ? 'bg-gradient-to-r from-cerulean to-cambridge-blue text-white shadow-lg scale-110 z-10 animate-pop' 
+                                      : 'bg-white/70 text-gunmetal/70 hover:bg-white hover:text-gunmetal hover:shadow-md hover:scale-105 scale-100'
                                     }
                                   `}
+                                  style={{
+                                    animation: isSelected ? 'pop 0.3s ease-out' : undefined
+                                  }}
                                   aria-label={option.label}
                                   title={option.label}
                                 >
