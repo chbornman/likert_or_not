@@ -15,6 +15,11 @@ services:
       - NOTIFICATION_EMAIL=${NOTIFICATION_EMAIL}
       - PORT=3000
       - RUST_LOG=info
+    volumes:
+      - type: bind
+        source: ./data
+        target: /app/data
+        is_directory: true  # Coolify will create this directory
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/form"]
