@@ -44,13 +44,25 @@ export interface ResponseWithAnswers {
 }
 
 export interface QuestionAverage {
+  question_id: number;
   question_text: string;
+  position: number;
   average_score: number;
   response_count: number;
+}
+
+export interface QuestionWithComments {
+  question_id: number;
+  question_text: string;
+  position: number;
+  average_score: number;
+  response_count: number;
+  comments: string[];
 }
 
 export interface Stats {
   total_responses: number;
   average_scores: QuestionAverage[];
+  questions_with_comments: QuestionWithComments[];
   recent_responses: Response[];
 }

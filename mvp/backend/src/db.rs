@@ -25,13 +25,13 @@ async fn seed_questions(pool: &SqlitePool) -> Result<()> {
         tracing::info!("Seeding Executive Director Performance Review questions...");
         
         let questions = vec![
-            // Part I: Organizational Leadership
+            // Organizational Leadership
             ("The Executive Director effectively leads the organization toward achieving its strategic goals", true, true, 1),
             ("The ED demonstrates clear understanding of the Board's strategic objectives", true, true, 2),
             ("The ED successfully translates strategic direction into actionable results", true, true, 3),
             ("The ED maintains focus on organizational priorities throughout the review period", true, true, 4),
             
-            // Part II: Role Fulfillment - Strategic Planning & Management
+            // Strategic Planning & Management
             ("The ED demonstrates effective strategic thinking and planning", true, true, 5),
             ("The ED manages operations efficiently and effectively", true, true, 6),
             ("The ED balances strategic vision with practical management needs", true, true, 7),
@@ -61,7 +61,7 @@ async fn seed_questions(pool: &SqlitePool) -> Result<()> {
             ("The ED coordinates volunteer efforts successfully", true, true, 23),
             ("The ED advocates effectively for the organization's mission", true, true, 24),
             
-            // Part III: Core Values & Competencies - Core Values
+            // Core Values
             ("The ED demonstrates persistence in pursuing organizational goals", true, true, 25),
             ("The ED shows commitment to continuous improvement", true, true, 26),
             ("The ED treats all stakeholders with decency and respect", true, true, 27),
@@ -76,7 +76,7 @@ async fn seed_questions(pool: &SqlitePool) -> Result<()> {
             ("The ED excels at external communication and relationship-building", true, true, 34),
             ("The ED models the behaviors expected of all employees", true, true, 35),
             
-            // Part IV: Overall Performance
+            // Overall Performance
             ("The ED regularly exceeds performance expectations", true, true, 36),
             ("The ED's leadership positively impacts organizational success", true, true, 37),
             ("The ED effectively addresses areas needing improvement", true, true, 38),

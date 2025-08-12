@@ -65,12 +65,25 @@ pub struct AnswerWithQuestion {
 pub struct Stats {
     pub total_responses: i32,
     pub average_scores: Vec<QuestionAverage>,
+    pub questions_with_comments: Vec<QuestionWithComments>,
     pub recent_responses: Vec<Response>,
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct QuestionAverage {
+    pub question_id: i32,
     pub question_text: String,
+    pub position: i32,
     pub average_score: f64,
     pub response_count: i32,
+}
+
+#[derive(Debug, Serialize)]
+pub struct QuestionWithComments {
+    pub question_id: i32,
+    pub question_text: String,
+    pub position: i32,
+    pub average_score: f64,
+    pub response_count: i32,
+    pub comments: Vec<String>,
 }

@@ -3,6 +3,7 @@ backend/target/
 backend/*.db
 backend/*.db-shm
 backend/*.db-wal
+backend/migrations
 
 # Frontend
 frontend/node_modules/
