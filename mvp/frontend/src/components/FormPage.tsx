@@ -769,12 +769,12 @@ export default function FormPage() {
                 disabled={sectionIdx > currentSection}
                 className={`relative rounded-full transition-all ${
                   sectionIdx === currentSection 
-                    ? 'w-8 h-3 bg-cerulean' 
+                    ? 'w-3 h-3 bg-gunmetal' 
                     : sectionIdx < currentSection 
                       ? `w-3 h-3 cursor-pointer hover:scale-110 ${
-                          isComplete ? 'bg-rose-quartz' : 'bg-cambridge-blue/50 animate-pulse'
+                          isComplete ? 'bg-cerulean' : 'bg-rose-quartz/30 animate-pulse'
                         }` 
-                      : 'w-2 h-2 bg-cambridge-blue/30'
+                      : 'w-2 h-2 bg-rose-quartz/30'
                 }`}
                 aria-label={`Go to ${sectionIdx === -1 ? 'Personal Information' : questionSections[sectionIdx]?.title || ''}`}
                 title={
