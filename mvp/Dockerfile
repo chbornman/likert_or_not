@@ -42,13 +42,19 @@ COPY --from=backend-builder /app/migrations /app/migrations
 # Copy frontend build
 COPY --from=frontend-builder /app/dist /app/frontend/dist
 
-# Create data directory for SQLite with proper permissions
-RUN mkdir -p /app/data && chmod 777 /app/data
+# Create data directory and ensure permissions at runtime
+RUN mkdir -p /app/data
 
-ENV DATABASE_URL=sqlite:///tmp/likert_form.db
+ENV DATABASE_URL=sqlite:///app/data/likert_form.db
 ENV PORT=3000
 ENV STATIC_DIR=/app/frontend/dist
 
 EXPOSE 3000
 
-CMD ["./likert-form-mvp"]
+# Use a shell script to ensure permissions before starting the app
+RUN echo '#!/bin/sh\n\
+mkdir -p /app/data\n\
+chmod 777 /app/data\n\
+exec ./likert-form-mvp' > /app/start.sh && chmod +x /app/start.sh
+
+CMD ["/app/start.sh"]
