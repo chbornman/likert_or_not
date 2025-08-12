@@ -66,8 +66,12 @@ async fn main() -> anyhow::Result<()> {
         .route("/admin/export", get(handlers::export_csv))
         .route("/admin/stats", get(handlers::get_stats));
 
-    let serve_dir = ServeDir::new("../frontend/dist")
-        .not_found_service(ServeFile::new("../frontend/dist/index.html"));
+    // Use STATIC_DIR env var for production, default to ../frontend/dist for development
+    let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "../frontend/dist".to_string());
+    let index_path = format!("{}/index.html", static_dir);
+    
+    let serve_dir = ServeDir::new(&static_dir)
+        .not_found_service(ServeFile::new(&index_path));
 
     let app = Router::new()
         .nest("/api", api_routes)
