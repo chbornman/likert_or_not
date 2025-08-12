@@ -37,7 +37,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "sqlite://./likert_form.db".to_string());
+        .unwrap_or_else(|_| "sqlite://./likert_form.db?mode=rwc".to_string());
     let admin_token = std::env::var("ADMIN_TOKEN")
         .expect("ADMIN_TOKEN must be set");
     let resend_api_key = std::env::var("RESEND_API_KEY")

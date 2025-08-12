@@ -46,7 +46,7 @@ COPY --from=frontend-builder /app/dist /app/frontend/dist
 # Create data directory and ensure permissions at runtime
 RUN mkdir -p /app/data
 
-ENV DATABASE_URL=sqlite:///app/data/likert_form.db
+ENV DATABASE_URL=sqlite:///app/data/likert_form.db?mode=rwc
 ENV PORT=3000
 ENV STATIC_DIR=/app/frontend/dist
 
