@@ -11,7 +11,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # Build backend
-FROM rust:1.75 as backend-builder
+FROM rustlang/rust:nightly as backend-builder
 
 WORKDIR /app
 
