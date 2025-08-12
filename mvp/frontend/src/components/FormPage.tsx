@@ -41,6 +41,8 @@ export default function FormPage() {
   const [showRestoredMessage, setShowRestoredMessage] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [draggingQuestion, setDraggingQuestion] = useState<number | null>(null);
+  const [dragStartX, setDragStartX] = useState<number>(0);
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -365,10 +367,10 @@ export default function FormPage() {
   const progressPercentage = currentSection === -1 ? 0 : ((currentSection + 1) / (totalSections + 1)) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 py-0 sm:py-8 px-0 sm:px-4">
       <div className="max-w-4xl mx-auto">
         {showRestoredMessage && (
-          <div className="mb-4 p-4 bg-cambridge-blue/20 border border-cambridge-blue rounded-lg flex items-center justify-between">
+          <div className="mb-4 p-4 mx-4 sm:mx-0 bg-cambridge-blue/20 border border-cambridge-blue rounded-lg flex items-center justify-between">
             <div className="flex items-center gap-3">
               <svg className="w-5 h-5 text-cerulean" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -395,9 +397,9 @@ export default function FormPage() {
             </div>
           </div>
         )}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6 px-4 sm:px-0">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-bold text-gunmetal">{formData.title}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gunmetal">{formData.title}</h1>
             <div className="flex items-center gap-4">
               {(isSaving || lastSaved) && (
                 <span className={`text-xs text-gunmetal/50 flex items-center gap-1 transition-all duration-300 ${
@@ -434,18 +436,18 @@ export default function FormPage() {
           </div>
         </div>
 
-        <Card className="shadow-xl border-0 bg-white/95 backdrop-blur">
-          <CardHeader className="bg-gradient-to-r from-cerulean to-cambridge-blue text-white rounded-t-lg">
-            <CardTitle className="text-2xl">
+        <Card className="shadow-none sm:shadow-xl border-0 bg-white sm:bg-white/95 backdrop-blur rounded-none sm:rounded-lg">
+          <CardHeader className="bg-gradient-to-r from-cerulean to-cambridge-blue text-white rounded-none sm:rounded-t-lg px-4 sm:px-6">
+            <CardTitle className="text-xl sm:text-2xl">
               {currentSection === -1 ? 'Personal Information' : questionSections[currentSection].title}
             </CardTitle>
-            <CardDescription className="text-cream/90 mt-2">
+            <CardDescription className="text-cream/90 mt-2 text-sm sm:text-base">
               {currentSection === -1 
                 ? 'Please provide your contact information to begin the evaluation.'
                 : `Answer all questions in this section. Required questions are marked with a red asterisk (*).`}
             </CardDescription>
           </CardHeader>
-          <CardContent className="pt-8">
+          <CardContent className="pt-6 sm:pt-8 px-3 sm:px-6">
             {currentSection === -1 ? (
               <div className="space-y-6">
                 {/* Time estimate section */}
@@ -534,65 +536,133 @@ export default function FormPage() {
                 ).map((question, idx) => (
                   <div 
                     key={question.id} 
-                    className={`space-y-3 p-5 rounded-xl transition-all ${
+                    className={`p-3 sm:p-5 rounded-lg sm:rounded-xl transition-all ${
                       validationErrors.has(question.id) 
                         ? 'bg-rose-quartz/10 border-2 border-rose-quartz shadow-lg shadow-rose-quartz/20' 
                         : 'bg-gradient-to-r from-cream/30 to-cambridge-blue/10 border border-cambridge-blue/20'
                     }`}
                   >
-                    <div className="flex items-start gap-3">
-                      <span className="text-sm font-bold text-white bg-cerulean rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        {questionSections[currentSection].start + idx + 1}
-                      </span>
-                      <Label className="text-base text-gunmetal leading-relaxed">
-                        {question.question_text}
-                        {question.is_required && <span className="text-rose-quartz ml-1 font-bold">*</span>}
-                      </Label>
-                    </div>
-                    
-                    {validationErrors.has(question.id) && (
-                      <div className="ml-11 text-rose-quartz text-sm font-medium bg-rose-quartz/20 px-3 py-1 rounded-md inline-block">
-                        This question is required
+                    <div className="space-y-3 sm:space-y-4">
+                      {/* Question text with number */}
+                      <div className="flex items-start gap-2 sm:gap-3">
+                        <span className="text-xs sm:text-sm font-bold text-white bg-cerulean rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          {questionSections[currentSection].start + idx + 1}
+                        </span>
+                        <Label className="text-sm sm:text-base text-gunmetal leading-relaxed">
+                          {question.question_text}
+                          {question.is_required && <span className="text-rose-quartz ml-1 font-bold">*</span>}
+                        </Label>
                       </div>
-                    )}
-                    
-                    <div className="ml-0 sm:ml-11">
-                      <div className="flex justify-center">
-                        <div className="inline-flex flex-col sm:flex-row rounded-2xl bg-cream/30 p-2 shadow-inner w-full sm:w-auto max-w-full">
-                          <div className="flex flex-row gap-1 overflow-x-auto sm:overflow-visible">
+                      
+                      {validationErrors.has(question.id) && (
+                        <div className="text-rose-quartz text-sm font-medium bg-rose-quartz/20 px-3 py-1 rounded-md inline-block mx-auto">
+                          This question is required
+                        </div>
+                      )}
+                      
+                      {/* Likert scale buttons - centered */}
+                      <div className="flex justify-center w-full">
+                        <div 
+                          className="flex flex-row sm:inline-flex sm:flex-row rounded-xl sm:rounded-2xl bg-cream/30 p-1.5 sm:p-2 shadow-inner w-full sm:w-auto select-none"
+                          onMouseDown={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setDragStartX(e.clientX);
+                            setDraggingQuestion(question.id);
+                          }}
+                          onMouseMove={(e) => {
+                            if (draggingQuestion === question.id && e.buttons === 1) {
+                              e.preventDefault();
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const x = e.clientX - rect.left;
+                              const width = rect.width;
+                              const position = Math.max(0, Math.min(1, x / width));
+                              const optionIndex = Math.round(position * (likertOptions.length - 1));
+                              const selectedValue = likertOptions[optionIndex].value;
+                              if (answers.get(question.id)?.likert_value !== selectedValue) {
+                                handleLikertChange(question.id, selectedValue.toString());
+                              }
+                            }
+                          }}
+                          onMouseUp={() => {
+                            setDraggingQuestion(null);
+                          }}
+                          onMouseLeave={() => {
+                            setDraggingQuestion(null);
+                          }}
+                          onTouchStart={(e) => {
+                            const touch = e.touches[0];
+                            setDragStartX(touch.clientX);
+                            setDraggingQuestion(question.id);
+                          }}
+                          onTouchMove={(e) => {
+                            if (draggingQuestion === question.id) {
+                              e.preventDefault();
+                              const touch = e.touches[0];
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const x = touch.clientX - rect.left;
+                              const width = rect.width;
+                              const position = Math.max(0, Math.min(1, x / width));
+                              const optionIndex = Math.round(position * (likertOptions.length - 1));
+                              const selectedValue = likertOptions[optionIndex].value;
+                              if (answers.get(question.id)?.likert_value !== selectedValue) {
+                                handleLikertChange(question.id, selectedValue.toString());
+                              }
+                            }
+                          }}
+                          onTouchEnd={() => {
+                            setDraggingQuestion(null);
+                          }}
+                          style={{ cursor: draggingQuestion === question.id ? 'grabbing' : 'grab' }}
+                        >
+                          <div className="flex flex-row gap-0.5 sm:gap-1 overflow-visible pointer-events-none w-full justify-between">
                             {likertOptions.map((option, index) => {
                               const isSelected = answers.get(question.id)?.likert_value === option.value;
-                              const isFirst = index === 0;
-                              const isLast = index === likertOptions.length - 1;
+                              const isDragging = draggingQuestion === question.id;
                               
                               return (
                                 <button
                                   key={option.value}
                                   type="button"
-                                  onClick={() => handleLikertChange(question.id, option.value.toString())}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleLikertChange(question.id, option.value.toString());
+                                  }}
+                                  onMouseDown={(e) => e.stopPropagation()}
                                   className={`
-                                    relative px-3 sm:px-4 lg:px-5 py-3 lg:py-3.5 text-xs sm:text-sm lg:text-base font-medium flex-1 sm:flex-initial min-w-0 rounded-xl
-                                    transform transition-all duration-300 ease-out
+                                    relative px-1.5 sm:px-4 lg:px-5 py-2 sm:py-3 lg:py-3.5 text-[9px] sm:text-sm lg:text-base font-medium flex-1 sm:flex-initial rounded-lg sm:rounded-xl
+                                    transform transition-all ${isDragging ? 'duration-100' : 'duration-300'} ease-out pointer-events-auto
                                     ${isSelected 
-                                      ? 'bg-gradient-to-r from-cerulean to-cambridge-blue text-white shadow-lg scale-110 z-10 animate-pop' 
+                                      ? 'bg-gradient-to-r from-cerulean to-cambridge-blue text-white shadow-lg scale-105 sm:scale-110 z-10 animate-pop' 
                                       : 'bg-white/70 text-gunmetal/70 hover:bg-white hover:text-gunmetal hover:shadow-md hover:scale-105 scale-100'
                                     }
                                   `}
                                   style={{
-                                    animation: isSelected ? 'pop 0.3s ease-out' : undefined
+                                    animation: isSelected && !isDragging ? 'pop 0.3s ease-out' : undefined,
+                                    minWidth: index === 0 || index === 4 ? '52px' : '40px'
                                   }}
                                   aria-label={option.label}
                                   title={option.label}
                                 >
-                                  <span className="block sm:whitespace-nowrap">
-                                    <span className="hidden sm:inline">{option.label}</span>
-                                    <span className="sm:hidden">
-                                      {option.value === 1 || option.value === 5 ? (
-                                        <span className="block">
-                                          <span className="block">Strongly</span>
-                                          <span className="block">{option.value === 1 ? 'Disagree' : 'Agree'}</span>
-                                        </span>
-                                      ) : option.label}
+                                  <span className="block">
+                                    <span className="hidden sm:inline whitespace-nowrap">{option.label}</span>
+                                    <span className="sm:hidden flex flex-col items-center justify-center">
+                                      {index === 0 ? (
+                                        <>
+                                          <span className="font-semibold leading-tight">Strongly</span>
+                                          <span className="leading-tight">Disagree</span>
+                                        </>
+                                      ) : index === 4 ? (
+                                        <>
+                                          <span className="font-semibold leading-tight">Strongly</span>
+                                          <span className="leading-tight">Agree</span>
+                                        </>
+                                      ) : index === 1 ? (
+                                        <span className="font-medium">Disagree</span>
+                                      ) : index === 2 ? (
+                                        <span className="font-medium">Neutral</span>
+                                      ) : (
+                                        <span className="font-medium">Agree</span>
+                                      )}
                                     </span>
                                   </span>
                                 </button>
@@ -601,10 +671,10 @@ export default function FormPage() {
                           </div>
                         </div>
                       </div>
-                    </div>
-
-                    {question.allow_comment && (
-                      <div className="ml-11">
+                      
+                      {/* Comments section - full width */}
+                      {question.allow_comment && (
+                        <div className="w-full">
                         <div className="flex items-center justify-between mb-2">
                           <Label htmlFor={`comment-${question.id}`} className="text-sm text-gunmetal/70 font-medium">
                             Comments (optional)
@@ -626,8 +696,9 @@ export default function FormPage() {
                           rows={3}
                           maxLength={MAX_COMMENT_LENGTH}
                         />
-                      </div>
-                    )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
