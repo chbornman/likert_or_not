@@ -90,7 +90,7 @@ pub async fn get_responses(
     Query(auth): Query<AuthQuery>,
 ) -> Result<Json<Vec<ResponseWithAnswers>>> {
     if auth.token != state.admin_token {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Unauthorized("Invalid admin token".to_string()));
     }
 
     let responses = sqlx::query_as::<_, Response>(
@@ -129,7 +129,7 @@ pub async fn export_csv(
     Query(auth): Query<AuthQuery>,
 ) -> Result<impl IntoResponse> {
     if auth.token != state.admin_token {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Unauthorized("Invalid admin token".to_string()));
     }
 
     let responses = get_all_responses_for_export(&state.db).await?;
@@ -196,7 +196,7 @@ pub async fn get_stats(
     Query(auth): Query<AuthQuery>,
 ) -> Result<Json<Stats>> {
     if auth.token != state.admin_token {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Unauthorized("Invalid admin token".to_string()));
     }
 
     let total: (i32,) = sqlx::query_as("SELECT COUNT(*) FROM responses")

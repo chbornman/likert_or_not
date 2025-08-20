@@ -1,21 +1,27 @@
 export interface Question {
   id: number;
   question_text: string;
+  question_type?: 'likert' | 'text' | 'textarea';
   is_required: boolean;
   allow_comment: boolean;
   position: number;
+  placeholder?: string;
+  rows?: number;
+  charLimit?: number;
 }
 
 export interface FormData {
   title: string;
   description: string;
   questions: Question[];
+  settings?: any;
 }
 
 export interface AnswerInput {
   question_id: number;
-  likert_value: number | null;
+  likert_value?: number | null;
   comment: string;
+  text_value?: string;
 }
 
 export interface SubmissionRequest {

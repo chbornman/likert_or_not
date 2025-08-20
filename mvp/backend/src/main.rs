@@ -1,12 +1,14 @@
 mod models;
+mod models_v2;
 mod handlers;
+mod handlers_v2_simple;
 mod db;
 mod email;
 mod error;
 
 use axum::{
     Router,
-    routing::{get, post},
+    routing::{get, post, put, delete},
 };
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
@@ -50,6 +52,11 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("Connecting to database: {}", database_url);
     let db = db::init_db(&database_url).await?;
+    
+    // Run migrations for v2 tables
+    if let Err(e) = run_v2_migrations(&db).await {
+        tracing::warn!("Failed to run v2 migrations: {}", e);
+    }
 
     let app_state = AppState {
         db,
@@ -58,26 +65,8 @@ async fn main() -> anyhow::Result<()> {
         notification_email,
     };
 
-    let api_routes = Router::new()
-        .route("/form", get(handlers::get_form))
-        .route("/submit", post(handlers::submit_response))
-        .route("/admin/responses", get(handlers::get_responses))
-        .route("/admin/export", get(handlers::export_csv))
-        .route("/admin/stats", get(handlers::get_stats));
-
-    // Use STATIC_DIR env var for production, default to ../frontend/dist for development
-    let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "../frontend/dist".to_string());
-    let index_path = format!("{}/index.html", static_dir);
-    
-    let serve_dir = ServeDir::new(&static_dir)
-        .not_found_service(ServeFile::new(&index_path));
-
-    let app = Router::new()
-        .nest("/api", api_routes)
-        .fallback_service(serve_dir)
-        .layer(CorsLayer::permissive())
-        .layer(TraceLayer::new_for_http())
-        .with_state(app_state);
+    // Build the full application with v2 routes
+    let app = build_full_app(app_state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     tracing::info!("Server running on http://{}", addr);
@@ -88,3 +77,159 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+async fn run_v2_migrations(pool: &SqlitePool) -> anyhow::Result<()> {
+    // Create v2 tables if they don't exist
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS forms (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            description TEXT,
+            status TEXT DEFAULT 'draft',
+            settings TEXT DEFAULT '{}',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        "#
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS sections (
+            id TEXT PRIMARY KEY,
+            form_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            position INTEGER NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (form_id) REFERENCES forms(id) ON DELETE CASCADE
+        )
+        "#
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS questions_v2 (
+            id TEXT PRIMARY KEY,
+            form_id TEXT NOT NULL,
+            section_id TEXT,
+            position INTEGER NOT NULL,
+            type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            features TEXT DEFAULT '{}',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (form_id) REFERENCES forms(id) ON DELETE CASCADE,
+            FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE SET NULL
+        )
+        "#
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS responses_v2 (
+            id TEXT PRIMARY KEY,
+            form_id TEXT NOT NULL,
+            respondent_name TEXT,
+            respondent_email TEXT,
+            submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            ip_address TEXT,
+            metadata TEXT DEFAULT '{}',
+            FOREIGN KEY (form_id) REFERENCES forms(id) ON DELETE CASCADE
+        )
+        "#
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS answers_v2 (
+            id TEXT PRIMARY KEY,
+            response_id TEXT NOT NULL,
+            question_id TEXT NOT NULL,
+            value TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (response_id) REFERENCES responses_v2(id) ON DELETE CASCADE,
+            FOREIGN KEY (question_id) REFERENCES questions_v2(id) ON DELETE CASCADE
+        )
+        "#
+    )
+    .execute(pool)
+    .await?;
+
+    // Check if we need to migrate the existing form
+    let form_exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM forms WHERE id = 'ed-review-2025'")
+        .fetch_one(pool)
+        .await
+        .unwrap_or((0,));
+
+    if form_exists.0 == 0 {
+        // Insert the ED review form
+        sqlx::query(
+            r#"
+            INSERT INTO forms (id, title, description, status, settings) VALUES (
+                'ed-review-2025',
+                'Executive Director Performance Review',
+                'Performance review for the Executive Director covering January - June 2025',
+                'published',
+                json_object(
+                    'reviewPeriod', 'January - June 2025',
+                    'confidentialityNotice', 'All feedback will be kept confidential. Your individual responses will not be shared in a way that identifies you.',
+                    'jobDescription', 'The Executive Director will be responsible for strategic planning, operational management, community outreach, and volunteer coordination and will work closely with the Board of Directors to ensure the financial health and sustainability of the organization while enhancing its programs and services. This role requires a hands-on leader who is both a strategic thinker and a practical manager, capable of inspiring staff, volunteers, and community partners.',
+                    'allowAnonymous', 0,
+                    'requireAuth', 0,
+                    'autoSave', 1,
+                    'progressBar', 1,
+                    'estimatedTime', '20 minutes'
+                )
+            )
+            "#
+        )
+        .execute(pool)
+        .await?;
+
+        tracing::info!("Created ED Review 2025 form");
+    }
+
+    Ok(())
+}
+
+fn build_full_app(app_state: AppState) -> Router {
+    // Use STATIC_DIR env var for production, default to ../frontend/dist for development
+    let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "../frontend/dist".to_string());
+    let index_path = format!("{}/index.html", static_dir);
+    
+    let serve_dir = ServeDir::new(&static_dir)
+        .not_found_service(ServeFile::new(&index_path));
+
+    // Build all routes including v2
+    Router::new()
+        // Legacy API routes
+        .route("/api/form", get(handlers::get_form))
+        .route("/api/submit", post(handlers::submit_response))
+        .route("/api/admin/responses", get(handlers::get_responses))
+        .route("/api/admin/export", get(handlers::export_csv))
+        .route("/api/admin/stats", get(handlers::get_stats))
+        // V2 public routes
+        .route("/api/v2/forms", get(handlers_v2_simple::list_forms))
+        .route("/api/v2/forms/{form_id}", get(handlers_v2_simple::get_form))
+        .route("/api/v2/forms/{form_id}/submit", post(handlers_v2_simple::submit_form))
+        // V2 admin routes (protected by RequireAuth in handlers)
+        .route("/api/v2/admin/forms", post(handlers_v2_simple::create_form))
+        .route("/api/v2/admin/forms/{form_id}", put(handlers_v2_simple::update_form).delete(handlers_v2_simple::delete_form))
+        .route("/api/v2/admin/forms/{form_id}/responses", get(handlers_v2_simple::list_responses))
+        .route("/api/v2/admin/forms/{form_id}/responses/{response_id}", get(handlers_v2_simple::get_response))
+        .route("/api/v2/admin/forms/{form_id}/stats", get(handlers_v2_simple::get_form_stats))
+        .route("/api/v2/admin/forms/{form_id}/export", get(handlers_v2_simple::export_form_data))
+        .fallback_service(serve_dir)
+        .layer(CorsLayer::permissive())
+        .layer(TraceLayer::new_for_http())
+        .with_state(app_state)
+}

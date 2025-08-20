@@ -16,6 +16,11 @@ pub async fn init_db(database_url: &str) -> Result<SqlitePool> {
     Ok(pool)
 }
 
+// Commented out for now - not needed for simple setup
+// pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
+//     Ok(())
+// }
+
 async fn seed_questions(pool: &SqlitePool) -> Result<()> {
     let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM questions")
         .fetch_one(pool)

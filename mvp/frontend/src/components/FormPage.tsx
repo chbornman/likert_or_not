@@ -84,10 +84,30 @@ export default function FormPage() {
 
   const fetchForm = async () => {
     try {
-      const response = await fetch('/api/form');
+      const response = await fetch('/api/v2/forms/ed-review-2025');
       if (!response.ok) throw new Error('Failed to load form');
       const data = await response.json();
-      setFormData(data);
+      // Transform v2 data to match original format - include ALL questions
+      const transformedData = {
+        title: data.title,
+        description: data.description,
+        questions: data.sections.flatMap((section: any) => 
+          section.questions.map((q: any) => ({
+            id: parseInt(q.id.replace('q', '')),
+            question_text: q.title,
+            question_type: q.type, // Add question type
+            is_required: q.features.required === 1 || q.features.required === true,
+            allow_comment: q.features.allowComment === 1 || q.features.allowComment === true,
+            position: q.position,
+            placeholder: q.features.placeholder,
+            rows: q.features.rows,
+            charLimit: q.features.charLimit
+          }))
+        ),
+        settings: data.settings
+      };
+      console.log('Transformed questions:', transformedData.questions.length, 'questions');
+      setFormData(transformedData);
       
       // Try to restore saved progress from local storage
       const savedData = localStorage.getItem(STORAGE_KEY);
@@ -105,11 +125,12 @@ export default function FormPage() {
             
             // Restore answers
             const restoredAnswers = new Map<number, AnswerInput>();
-            data.questions.forEach((q: any) => {
+            transformedData.questions.forEach((q: any) => {
               restoredAnswers.set(q.id, {
                 question_id: q.id,
-                likert_value: null,
+                likert_value: q.question_type === 'likert' ? null : undefined,
                 comment: '',
+                text_value: q.question_type !== 'likert' ? '' : undefined,
               });
             });
             
@@ -132,15 +153,15 @@ export default function FormPage() {
           } else {
             // Clear old saved data
             localStorage.removeItem(STORAGE_KEY);
-            initializeEmptyForm(data);
+            initializeEmptyForm(transformedData);
           }
         } catch (e) {
           console.error('Failed to restore saved progress:', e);
           localStorage.removeItem(STORAGE_KEY);
-          initializeEmptyForm(data);
+          initializeEmptyForm(transformedData);
         }
       } else {
-        initializeEmptyForm(data);
+        initializeEmptyForm(transformedData);
       }
     } catch (err) {
       setError('Failed to load form. Please refresh the page.');
@@ -154,8 +175,9 @@ export default function FormPage() {
     data.questions.forEach((q: any) => {
       initialAnswers.set(q.id, {
         question_id: q.id,
-        likert_value: null,
+        likert_value: q.question_type === 'likert' ? null : undefined,
         comment: '',
+        text_value: q.question_type !== 'likert' ? '' : undefined,
       });
     });
     setAnswers(initialAnswers);
@@ -210,6 +232,28 @@ export default function FormPage() {
     })));
   };
 
+  const handleTextChange = (questionId: number, value: string, charLimit?: number) => {
+    // Apply character limit if specified
+    if (charLimit && value.length > charLimit) {
+      return;
+    }
+    
+    const current = answers.get(questionId)!;
+    const newAnswers = new Map(answers);
+    newAnswers.set(questionId, {
+      ...current,
+      text_value: value,
+    });
+    setAnswers(newAnswers);
+    
+    // Clear validation error for this question if it now has content
+    if (value.trim() && validationErrors.has(questionId)) {
+      const newErrors = new Set(validationErrors);
+      newErrors.delete(questionId);
+      setValidationErrors(newErrors);
+    }
+  };
+
   const validateSection = (sectionIndex: number): boolean => {
     if (!formData) return false;
     
@@ -221,9 +265,19 @@ export default function FormPage() {
     sectionQuestions.forEach(q => {
       if (q.is_required) {
         const answer = answers.get(q.id);
-        if (!answer || answer.likert_value === null) {
+        if (!answer) {
           newErrors.add(q.id);
           isValid = false;
+        } else if (q.question_type === 'likert' || !q.question_type) {
+          if (answer.likert_value === null) {
+            newErrors.add(q.id);
+            isValid = false;
+          }
+        } else if (q.question_type === 'text' || q.question_type === 'textarea') {
+          if (!answer.text_value || answer.text_value.trim() === '') {
+            newErrors.add(q.id);
+            isValid = false;
+          }
         }
       }
     });
@@ -274,14 +328,26 @@ export default function FormPage() {
     // Validate ALL required questions across all sections
     if (!formData) return;
     
-    const allRequiredAnswered = formData.questions
+    const unansweredRequired = formData.questions
       .filter(q => q.is_required)
-      .every(q => {
+      .filter(q => {
         const answer = answers.get(q.id);
-        return answer && answer.likert_value !== null;
+        if (!answer) return true;
+        
+        // Check based on question type
+        if (q.question_type === 'likert') {
+          return answer.likert_value === null;
+        } else if (q.question_type === 'text' || q.question_type === 'textarea') {
+          return !answer.text_value || answer.text_value.trim() === '';
+        }
+        
+        // Default to likert for backward compatibility
+        return answer.likert_value === null;
       });
 
-    if (!allRequiredAnswered) {
+    if (unansweredRequired.length > 0) {
+      console.log('Unanswered required questions:', unansweredRequired);
+      console.log('Current answers map:', Array.from(answers.entries()).map(([id, a]) => ({id, likert: a.likert_value})));
       setError('Please complete all required questions in previous sections before submitting');
       return;
     }
@@ -290,13 +356,47 @@ export default function FormPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/submit', {
+      // Transform answers to v2 format
+      const v2Answers = Array.from(answers.entries())
+        .filter(([qId, a]) => {
+          const question = formData.questions.find(q => q.id === qId);
+          if (!question) return false;
+          
+          // Include answers based on question type
+          if (question.question_type === 'likert') {
+            return a.likert_value !== null;
+          } else if (question.question_type === 'text' || question.question_type === 'textarea') {
+            return a.text_value && a.text_value.trim() !== '';
+          }
+          return a.likert_value !== null; // default
+        })
+        .map(([qId, a]) => {
+          const question = formData.questions.find(q => q.id === qId);
+          
+          if (question?.question_type === 'text' || question?.question_type === 'textarea') {
+            return {
+              question_id: `q${a.question_id}`,
+              value: a.text_value
+            };
+          }
+          
+          // Likert question
+          return {
+            question_id: `q${a.question_id}`,
+            value: a.comment ? {
+              rating: a.likert_value,
+              comment: a.comment
+            } : a.likert_value
+          };
+        });
+      
+      const response = await fetch('/api/v2/forms/ed-review-2025/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           respondent_name: name,
           respondent_email: email,
-          answers: Array.from(answers.values()).filter(a => a.likert_value !== null),
+          answers: v2Answers,
         }),
       });
 
@@ -488,10 +588,10 @@ export default function FormPage() {
                     }}
                     onBlur={() => handleFieldTouch('name')}
                     required
-                    className={`mt-2 border-2 transition-all ${
+                    className={`mt-2 border-2 transition-all bg-white/80 ${
                       touchedFields.has('name') && !name.trim() 
                         ? 'border-rose-quartz ring-2 ring-rose-quartz/30' 
-                        : 'border-cambridge-blue/30 focus:border-cerulean'
+                        : 'border-cambridge-blue/30 focus:border-cerulean focus:bg-white'
                     }`}
                     placeholder="Enter your full name"
                   />
@@ -516,10 +616,10 @@ export default function FormPage() {
                     }}
                     onBlur={() => handleFieldTouch('email')}
                     required
-                    className={`mt-2 border-2 transition-all ${
+                    className={`mt-2 border-2 transition-all bg-white/80 ${
                       touchedFields.has('email') && (!email.trim() || !email.includes('@'))
                         ? 'border-rose-quartz ring-2 ring-rose-quartz/30' 
-                        : 'border-cambridge-blue/30 focus:border-cerulean'
+                        : 'border-cambridge-blue/30 focus:border-cerulean focus:bg-white'
                     }`}
                     placeholder="your.email@example.com"
                   />
@@ -560,7 +660,43 @@ export default function FormPage() {
                         </div>
                       )}
                       
-                      {/* Likert scale buttons - centered */}
+                      {/* Render based on question type */}
+                      {(question.question_type === 'textarea') ? (
+                        /* Textarea question */
+                        <div className="w-full">
+                          <Textarea
+                            value={answers.get(question.id)?.text_value || ''}
+                            onChange={(e) => handleTextChange(question.id, e.target.value, question.charLimit)}
+                            placeholder={question.placeholder || 'Enter your response here...'}
+                            className="w-full min-h-[120px] border-2 border-cambridge-blue/30 focus:border-cerulean"
+                            rows={question.rows || 5}
+                            maxLength={question.charLimit}
+                          />
+                          {question.charLimit && (
+                            <span className="text-xs text-gunmetal/50 mt-1">
+                              {answers.get(question.id)?.text_value?.length || 0}/{question.charLimit} characters
+                            </span>
+                          )}
+                        </div>
+                      ) : (question.question_type === 'text') ? (
+                        /* Text input question */
+                        <div className="w-full">
+                          <Input
+                            type="text"
+                            value={answers.get(question.id)?.text_value || ''}
+                            onChange={(e) => handleTextChange(question.id, e.target.value, question.charLimit)}
+                            placeholder={question.placeholder || 'Enter your response'}
+                            className="w-full border-2 border-cambridge-blue/30 focus:border-cerulean"
+                            maxLength={question.charLimit}
+                          />
+                          {question.charLimit && (
+                            <span className="text-xs text-gunmetal/50 mt-1">
+                              {answers.get(question.id)?.text_value?.length || 0}/{question.charLimit} characters
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                      /* Likert scale buttons - default */
                       <div className="flex justify-center w-full">
                         <div 
                           className="flex flex-row sm:inline-flex sm:flex-row rounded-xl sm:rounded-2xl bg-cream/30 p-1.5 sm:p-2 shadow-inner w-full sm:w-auto select-none"
@@ -669,9 +805,10 @@ export default function FormPage() {
                           </div>
                         </div>
                       </div>
+                      )}
                       
-                      {/* Comments section - full width */}
-                      {question.allow_comment && (
+                      {/* Comments section - full width (only for likert questions) */}
+                      {question.allow_comment && (!question.question_type || question.question_type === 'likert') && (
                         <div className="w-full">
                         <div className="flex items-center justify-between mb-2">
                           <Label htmlFor={`comment-${question.id}`} className="text-sm text-gunmetal/70 font-medium">
