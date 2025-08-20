@@ -7,7 +7,7 @@ services:
       - "3000:3000"
     environment:
       - DATABASE_URL=sqlite:///app/data/likert_form.db?mode=rwc
-      - ADMIN_TOKEN=${ADMIN_TOKEN:-change-this-to-a-secure-token}
+      - ADMIN_TOKEN=${ADMIN_TOKEN}
       - RESEND_API_KEY=${RESEND_API_KEY:-}
       - NOTIFICATION_EMAIL=${NOTIFICATION_EMAIL:-admin@example.com}
       - PORT=3000
