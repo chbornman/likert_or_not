@@ -164,40 +164,7 @@ async fn run_v2_migrations(pool: &SqlitePool) -> anyhow::Result<()> {
     .execute(pool)
     .await?;
 
-    // Check if we need to migrate the existing form
-    let form_exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM forms WHERE id = 'ed-review-2025'")
-        .fetch_one(pool)
-        .await
-        .unwrap_or((0,));
-
-    if form_exists.0 == 0 {
-        // Insert the ED review form
-        sqlx::query(
-            r#"
-            INSERT INTO forms (id, title, description, status, settings) VALUES (
-                'ed-review-2025',
-                'Executive Director Performance Review',
-                'Performance review for the Executive Director covering January - June 2025',
-                'published',
-                json_object(
-                    'reviewPeriod', 'January - June 2025',
-                    'confidentialityNotice', 'All feedback will be kept confidential. Your individual responses will not be shared in a way that identifies you.',
-                    'jobDescription', 'The Executive Director will be responsible for strategic planning, operational management, community outreach, and volunteer coordination and will work closely with the Board of Directors to ensure the financial health and sustainability of the organization while enhancing its programs and services. This role requires a hands-on leader who is both a strategic thinker and a practical manager, capable of inspiring staff, volunteers, and community partners.',
-                    'allowAnonymous', 0,
-                    'requireAuth', 0,
-                    'autoSave', 1,
-                    'progressBar', 1,
-                    'estimatedTime', '20 minutes'
-                )
-            )
-            "#
-        )
-        .execute(pool)
-        .await?;
-
-        tracing::info!("Created ED Review 2025 form");
-    }
-
+    tracing::info!("V2 database schema initialized successfully");
     Ok(())
 }
 
