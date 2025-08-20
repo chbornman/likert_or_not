@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { ResponseWithAnswers, Stats } from '@/types';
 
 const questionSections = [
@@ -17,37 +18,58 @@ const questionSections = [
 ];
 
 export default function AdminPage() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const [password, setPassword] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [token, setToken] = useState<string | null>(null);
   
   const [responses, setResponses] = useState<ResponseWithAnswers[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedResponse, setSelectedResponse] = useState<ResponseWithAnswers | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
-  useEffect(() => {
-    if (!token) {
-      setError('Access token required');
-      setLoading(false);
-      return;
-    }
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
     
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+    // Use the password as the token directly
+    setToken(password);
+    setIsAuthenticated(true);
+    setLoading(true);
+    
+    // Try to fetch data with this token
+    fetchData(password);
+  };
 
-  const fetchData = async () => {
+  useEffect(() => {
+    // Check if there's a saved token in sessionStorage
+    const savedToken = sessionStorage.getItem('admin_token');
+    if (savedToken) {
+      setToken(savedToken);
+      setIsAuthenticated(true);
+      setLoading(true);
+      fetchData(savedToken);
+    }
+  }, []);
+
+  const fetchData = async (authToken: string) => {
     try {
       const [responsesRes, statsRes] = await Promise.all([
-        fetch(`/api/admin/responses?token=${token}`),
-        fetch(`/api/admin/stats?token=${token}`),
+        fetch(`/api/admin/responses?token=${authToken}`),
+        fetch(`/api/admin/stats?token=${authToken}`),
       ]);
 
       if (!responsesRes.ok || !statsRes.ok) {
-        throw new Error('Unauthorized or server error');
+        if (responsesRes.status === 401 || statsRes.status === 401) {
+          throw new Error('Invalid password');
+        }
+        throw new Error('Server error');
       }
+      
+      // Save successful token
+      sessionStorage.setItem('admin_token', authToken);
 
       const [responsesData, statsData] = await Promise.all([
         responsesRes.json(),
@@ -57,15 +79,75 @@ export default function AdminPage() {
       setResponses(responsesData);
       setStats(statsData);
     } catch (err) {
-      setError('Failed to load admin data. Check your access token.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load data';
+      if (errorMessage === 'Invalid password') {
+        setAuthError('Invalid password. Please try again.');
+        setIsAuthenticated(false);
+        sessionStorage.removeItem('admin_token');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const handleLogout = () => {
+    sessionStorage.removeItem('admin_token');
+    setIsAuthenticated(false);
+    setToken(null);
+    setPassword('');
+    setResponses([]);
+    setStats(null);
+  };
+
   const handleExport = async () => {
     window.location.href = `/api/admin/export?token=${token}`;
   };
+
+  // Show password form if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 flex items-center justify-center px-4">
+        <Card className="max-w-md w-full shadow-xl">
+          <CardHeader className="bg-gradient-to-r from-cambridge-blue to-cerulean text-white">
+            <CardTitle className="text-2xl">Admin Access</CardTitle>
+            <CardDescription className="text-cream/90">
+              Enter your admin password to view responses
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="password" className="text-gunmetal font-semibold">
+                  Password
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter admin password"
+                  className="mt-2 border-2 border-cambridge-blue/30 focus:border-cerulean bg-white/80 focus:bg-white"
+                  autoFocus
+                />
+              </div>
+              {authError && (
+                <p className="text-rose-quartz text-sm font-medium">{authError}</p>
+              )}
+              <Button 
+                type="submit" 
+                className="w-full bg-gradient-to-r from-cerulean to-cambridge-blue hover:from-cerulean/90 hover:to-cambridge-blue/90 text-white"
+                disabled={!password.trim()}
+              >
+                Access Dashboard
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -77,8 +159,21 @@ export default function AdminPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 flex items-center justify-center">
-        <div className="text-lg text-red-600">{error}</div>
+      <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 flex items-center justify-center px-4">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="text-red-600">Error</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>{error}</p>
+            <Button 
+              onClick={handleLogout} 
+              className="mt-4 bg-gunmetal hover:bg-gunmetal/90"
+            >
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -88,12 +183,21 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         <div className="flex justify-between items-center mb-6 sm:mb-8 px-4 sm:px-0">
           <h1 className="text-2xl sm:text-4xl font-bold text-gunmetal">Admin Dashboard</h1>
-          <Button 
-            onClick={handleExport}
-            className="bg-gradient-to-r from-cerulean to-cambridge-blue hover:from-cerulean/90 hover:to-cambridge-blue/90 text-white font-semibold px-6 py-3 rounded-lg transition-all shadow-lg"
-          >
-            Export to CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleExport}
+              className="bg-gradient-to-r from-cerulean to-cambridge-blue hover:from-cerulean/90 hover:to-cambridge-blue/90 text-white font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-all shadow-lg"
+            >
+              Export CSV
+            </Button>
+            <Button 
+              onClick={handleLogout}
+              variant="outline"
+              className="border-gunmetal text-gunmetal hover:bg-gunmetal hover:text-white px-4 sm:px-6 py-2 sm:py-3"
+            >
+              Logout
+            </Button>
+          </div>
         </div>
 
 
