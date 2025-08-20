@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FileSpreadsheet } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface Form {
   id: string;
@@ -119,6 +121,116 @@ export default function AdminDashboard() {
   const navigateToFormResults = (formId: string) => {
     // Navigate to form-specific results page, passing the token
     navigate(`/admin/forms/${formId}`, { state: { token } });
+  };
+
+  const exportFormToExcel = async (formId: string, formTitle: string) => {
+    try {
+      // Fetch full form data
+      const formRes = await fetch(`/api/v2/forms/${formId}`);
+      if (!formRes.ok) throw new Error('Failed to load form');
+      const formData = await formRes.json();
+      
+      // Fetch responses
+      const responsesRes = await fetch(`/api/admin/responses?token=${token}&form_id=${formId}`);
+      if (!responsesRes.ok) throw new Error('Failed to load responses');
+      const responsesData = await responsesRes.json();
+      
+      // Extract sections and questions
+      const sections: any[] = [];
+      const questions: any[] = [];
+      
+      if (formData.sections) {
+        formData.sections.forEach((section: any) => {
+          sections.push({
+            id: section.id,
+            title: section.title,
+            description: section.description,
+            position: section.position
+          });
+          
+          if (section.questions) {
+            section.questions.forEach((q: any) => {
+              questions.push(q);
+            });
+          }
+        });
+      }
+      
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      
+      // Summary sheet
+      const summaryData: any[][] = [];
+      summaryData.push(['Form Summary Report']);
+      summaryData.push(['']);
+      summaryData.push(['Form Title:', formTitle]);
+      summaryData.push(['Form ID:', formId]);
+      summaryData.push(['Generated:', new Date().toLocaleString()]);
+      summaryData.push(['']);
+      summaryData.push(['Response Statistics']);
+      summaryData.push(['Total Responses:', responsesData.length]);
+      summaryData.push(['Completed:', responsesData.filter((r: any) => r.completed).length]);
+      summaryData.push(['In Progress:', responsesData.filter((r: any) => !r.completed).length]);
+      summaryData.push(['']);
+      
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+      summarySheet['!cols'] = [{ wch: 25 }, { wch: 40 }];
+      XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+      
+      // Responses sheet
+      if (responsesData.length > 0) {
+        const headers = ['Response ID', 'Submitted At', 'Completed'];
+        questions.forEach((q: any) => {
+          headers.push(q.title);
+        });
+        
+        const rows = responsesData.map((response: any) => {
+          const row = [
+            response.id,
+            new Date(response.submitted_at).toLocaleString(),
+            response.completed ? 'Yes' : 'No'
+          ];
+          
+          questions.forEach((q: any) => {
+            const answer = response.answers[q.id];
+            if (!answer) {
+              row.push('');
+            } else if (q.question_type === 'likert') {
+              row.push(answer.likert_value || '');
+            } else {
+              row.push(answer.text_value || '');
+            }
+          });
+          
+          return row;
+        });
+        
+        const responseData = [headers, ...rows];
+        const responseSheet = XLSX.utils.aoa_to_sheet(responseData);
+        XLSX.utils.book_append_sheet(wb, responseSheet, 'Responses');
+      }
+      
+      // Generate and download
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+      
+      function s2ab(s: string) {
+        const buf = new ArrayBuffer(s.length);
+        const view = new Uint8Array(buf);
+        for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+        return buf;
+      }
+      
+      const blob = new Blob([s2ab(wbout)], { type: 'application/octet-stream' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${formId}-quick-export-${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export Excel:', error);
+      alert('Failed to export Excel file. Please try again.');
+    }
   };
 
   // Show password form if not authenticated
@@ -262,15 +374,27 @@ export default function AdminDashboard() {
                         </div>
                       )}
                     </div>
-                    <Button 
-                      className="w-full mt-4 bg-gradient-to-r from-cerulean to-cambridge-blue hover:from-cerulean/90 hover:to-cambridge-blue/90 text-white"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigateToFormResults(form.id);
-                      }}
-                    >
-                      View Results
-                    </Button>
+                    <div className="flex gap-2 mt-4">
+                      <Button 
+                        className="flex-1 bg-gradient-to-r from-cerulean to-cambridge-blue hover:from-cerulean/90 hover:to-cambridge-blue/90 text-white"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigateToFormResults(form.id);
+                        }}
+                      >
+                        View Results
+                      </Button>
+                      <Button
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          exportFormToExcel(form.id, form.title);
+                        }}
+                        title="Quick Excel Export"
+                      >
+                        <FileSpreadsheet className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               );
