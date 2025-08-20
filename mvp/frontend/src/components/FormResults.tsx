@@ -62,23 +62,41 @@ export default function FormResults() {
     try {
       setLoading(true);
       
-      // Fetch form details
+      // Fetch form details with sections and questions
       const formRes = await fetch(`/api/v2/forms/${formId}`);
       if (!formRes.ok) throw new Error('Failed to load form');
       const formData = await formRes.json();
-      setForm(formData);
+      
+      // Extract form, sections, and questions from the response
+      setForm({
+        id: formData.id,
+        title: formData.title,
+        description: formData.description
+      });
 
-      // Fetch sections
-      const sectionsRes = await fetch(`/api/v2/forms/${formId}/sections`);
-      if (!sectionsRes.ok) throw new Error('Failed to load sections');
-      const sectionsData = await sectionsRes.json();
-      setSections(sectionsData.sort((a: Section, b: Section) => a.position - b.position));
-
-      // Fetch questions
-      const questionsRes = await fetch(`/api/v2/forms/${formId}/questions`);
-      if (!questionsRes.ok) throw new Error('Failed to load questions');
-      const questionsData = await questionsRes.json();
-      setQuestions(questionsData.sort((a: Question, b: Question) => a.position - b.position));
+      // Extract sections and questions from the nested structure
+      const allSections: Section[] = [];
+      const allQuestions: Question[] = [];
+      
+      if (formData.sections) {
+        formData.sections.forEach((section: any) => {
+          allSections.push({
+            id: section.id,
+            title: section.title,
+            description: section.description,
+            position: section.position
+          });
+          
+          if (section.questions) {
+            section.questions.forEach((q: any) => {
+              allQuestions.push(q);
+            });
+          }
+        });
+      }
+      
+      setSections(allSections.sort((a, b) => a.position - b.position));
+      setQuestions(allQuestions.sort((a, b) => a.position - b.position));
 
       // Fetch responses
       const responsesRes = await fetch(`/api/admin/responses?token=${token}&form_id=${formId}`);
