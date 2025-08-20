@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,10 +27,10 @@ const questionSections = [
   { start: 35, end: 40, title: "Overall Performance" },
 ];
 
-const STORAGE_KEY = 'likert-form-progress';
-
 export default function FormPage() {
   const navigate = useNavigate();
+  const { formId } = useParams<{ formId: string }>();
+  const STORAGE_KEY = `likert-form-progress-${formId}`;
   const [formData, setFormData] = useState<FormData | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -83,8 +83,13 @@ export default function FormPage() {
   }, []);
 
   const fetchForm = async () => {
+    if (!formId) {
+      navigate('/');
+      return;
+    }
+    
     try {
-      const response = await fetch('/api/v2/forms/ed-review-2025');
+      const response = await fetch(`/api/v2/forms/${formId}`);
       if (!response.ok) throw new Error('Failed to load form');
       const data = await response.json();
       // Transform v2 data to match original format - include ALL questions
@@ -390,7 +395,7 @@ export default function FormPage() {
           };
         });
       
-      const response = await fetch('/api/v2/forms/ed-review-2025/submit', {
+      const response = await fetch(`/api/v2/forms/${formId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
