@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Form Configuration Schema",
+  "description": "Schema for defining Likert forms with sections and questions",
+  "type": "object",
+  "required": ["id", "title", "sections"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the form",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "title": {
+      "type": "string",
+      "description": "Display title of the form"
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of the form's purpose"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "published", "archived"],
+      "default": "published",
+      "description": "Publication status of the form"
+    },
+    "welcome_message": {
+      "type": "string",
+      "description": "Message shown at the start of the form"
+    },
+    "closing_message": {
+      "type": "string",
+      "description": "Message shown after form completion"
+    },
+    "sections": {
+      "type": "array",
+      "description": "Sections containing groups of questions",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "position", "questions"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the section"
+          },
+          "title": {
+            "type": "string",
+            "description": "Section title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional section description"
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Display order of the section"
+          },
+          "questions": {
+            "type": "array",
+            "description": "Questions within this section",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "title", "question_type", "position"],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Unique identifier for the question"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "The question text"
+                },
+                "question_type": {
+                  "type": "string",
+                  "enum": ["likert", "text", "textarea", "yes_no", "multiple_choice"],
+                  "description": "Type of question input"
+                },
+                "is_required": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Whether this question must be answered"
+                },
+                "position": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Display order within the section"
+                },
+                "help_text": {
+                  "type": "string",
+                  "description": "Additional guidance for answering the question"
+                },
+                "options": {
+                  "type": "array",
+                  "description": "Options for multiple choice questions",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

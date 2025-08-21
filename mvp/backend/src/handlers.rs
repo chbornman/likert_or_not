@@ -10,6 +10,7 @@ use crate::{
     error::{AppError, Result},
     models::*,
     email,
+    config::FormConfig,
 };
 
 #[derive(Deserialize)]
@@ -253,4 +254,23 @@ pub async fn get_stats(
         questions_with_comments,
         recent_responses: recent,
     }))
+}
+
+pub async fn import_form_config(
+    State(state): State<AppState>,
+    Query(auth): Query<AuthQuery>,
+    Json(config): Json<FormConfig>,
+) -> Result<Json<serde_json::Value>> {
+    if auth.token != state.admin_token {
+        return Err(AppError::Unauthorized("Invalid admin token".to_string()));
+    }
+
+    let form_id = crate::config::import_form_config(&state.db, config).await
+        .map_err(|e| AppError::BadRequest(e.to_string()))?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "form_id": form_id,
+        "message": "Form imported successfully"
+    })))
 }

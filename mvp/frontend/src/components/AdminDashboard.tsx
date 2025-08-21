@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileSpreadsheet } from 'lucide-react';
+import { FileSpreadsheet, Upload, Plus } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface Form {
@@ -24,10 +24,13 @@ interface FormStats {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState('');
   const [token, setToken] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState('');
+  const [uploadSuccess, setUploadSuccess] = useState('');
   
   const [forms, setForms] = useState<Form[]>([]);
   const [formStats, setFormStats] = useState<Map<string, FormStats>>(new Map());
@@ -306,19 +309,95 @@ export default function AdminDashboard() {
     );
   }
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadError('');
+    setUploadSuccess('');
+
+    if (!file.name.endsWith('.json')) {
+      setUploadError('Please upload a JSON file');
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const config = JSON.parse(text);
+
+      const response = await fetch(`/api/admin/import-form?token=${token}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(config),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to import form');
+      }
+
+      setUploadSuccess(`Form "${config.title}" imported successfully!`);
+      // Refresh the forms list
+      setTimeout(() => {
+        fetchDashboardData(token!);
+        setUploadSuccess('');
+      }, 2000);
+    } catch (error) {
+      console.error('Import error:', error);
+      setUploadError(error instanceof Error ? error.message : 'Failed to import form configuration');
+    }
+
+    // Reset the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 py-8 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gunmetal">Admin Dashboard</h1>
-          <Button 
-            onClick={handleLogout}
-            variant="outline"
-            className="border-gunmetal text-gunmetal hover:bg-gunmetal hover:text-white"
-          >
-            Logout
-          </Button>
+          <div className="flex gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleFileUpload}
+              className="hidden"
+              id="form-upload"
+            />
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Import Form
+            </Button>
+            <Button 
+              onClick={handleLogout}
+              variant="outline"
+              className="border-gunmetal text-gunmetal hover:bg-gunmetal hover:text-white"
+            >
+              Logout
+            </Button>
+          </div>
         </div>
+
+        {uploadError && (
+          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+            {uploadError}
+          </div>
+        )}
+        
+        {uploadSuccess && (
+          <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+            {uploadSuccess}
+          </div>
+        )}
 
         {forms.length === 0 ? (
           <Card>

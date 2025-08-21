@@ -5,6 +5,7 @@ mod handlers_v2_simple;
 mod db;
 mod email;
 mod error;
+mod config;
 
 use axum::{
     Router,
@@ -189,6 +190,7 @@ fn build_full_app(app_state: AppState) -> Router {
         .route("/api/v2/forms/{form_id}", get(handlers_v2_simple::get_form))
         .route("/api/v2/forms/{form_id}/submit", post(handlers_v2_simple::submit_form))
         // V2 admin routes (protected by RequireAuth in handlers)
+        .route("/api/admin/import-form", post(handlers::import_form_config))
         .route("/api/v2/admin/forms", post(handlers_v2_simple::create_form))
         .route("/api/v2/admin/forms/{form_id}", put(handlers_v2_simple::update_form).delete(handlers_v2_simple::delete_form))
         .route("/api/v2/admin/forms/{form_id}/responses", get(handlers_v2_simple::list_responses))

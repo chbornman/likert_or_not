@@ -1,0 +1,58 @@
+{
+  "$schema": "./form-schema.json",
+  "id": "example-form-id",
+  "title": "Example Form Title",
+  "description": "A brief description of what this form is for",
+  "status": "published",
+  "welcome_message": "Welcome message shown at the start of the form",
+  "closing_message": "Thank you message shown after completion",
+  "sections": [
+    {
+      "id": "section-1",
+      "title": "Section Title",
+      "description": "Optional section description",
+      "position": 1,
+      "questions": [
+        {
+          "id": "q1",
+          "title": "Example Likert scale question",
+          "question_type": "likert",
+          "is_required": true,
+          "position": 1,
+          "help_text": "Optional help text for this question"
+        },
+        {
+          "id": "q2",
+          "title": "Example text input question",
+          "question_type": "text",
+          "is_required": false,
+          "position": 2,
+          "help_text": "Users can enter free-form text here"
+        },
+        {
+          "id": "q3",
+          "title": "Example long text question",
+          "question_type": "textarea",
+          "is_required": false,
+          "position": 3,
+          "help_text": "For longer responses"
+        }
+      ]
+    },
+    {
+      "id": "section-2",
+      "title": "Another Section",
+      "description": "You can have multiple sections",
+      "position": 2,
+      "questions": [
+        {
+          "id": "q4",
+          "title": "Another Likert question",
+          "question_type": "likert",
+          "is_required": true,
+          "position": 1
+        }
+      ]
+    }
+  ]
+}
