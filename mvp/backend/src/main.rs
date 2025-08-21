@@ -28,7 +28,9 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    dotenvy::dotenv().ok();
+    // Try to load from parent directory first (for local development), then current directory
+    dotenvy::from_filename("../.env").ok()
+        .or_else(|| dotenvy::dotenv().ok());
 
     tracing_subscriber::registry()
         .with(
