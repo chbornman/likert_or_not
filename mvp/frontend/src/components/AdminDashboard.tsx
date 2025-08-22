@@ -289,7 +289,8 @@ export default function AdminDashboard() {
     );
   }
 
-  if (error) {
+  // Don't show error state for "Failed to load forms" - just show empty state
+  if (error && error !== 'Failed to load forms') {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 flex items-center justify-center px-4">
         <Card className="max-w-md w-full">
@@ -401,9 +402,18 @@ export default function AdminDashboard() {
         )}
 
         {forms.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-8">
-              <p className="text-gray-500">No forms available</p>
+          <Card className="border-2 border-dashed border-gray-300">
+            <CardContent className="text-center py-12">
+              <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+              <p className="text-gray-600 text-lg font-medium mb-2">No forms available yet</p>
+              <p className="text-gray-500 mb-6">Get started by importing your first form configuration</p>
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Import Your First Form
+              </Button>
             </CardContent>
           </Card>
         ) : (
