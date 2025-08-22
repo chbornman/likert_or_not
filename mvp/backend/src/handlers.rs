@@ -15,7 +15,7 @@ use crate::{
     models::*,
 };
 
-/// List all published forms
+/// List all forms (including archived)
 pub async fn list_forms(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -23,7 +23,6 @@ pub async fn list_forms(
         r#"
         SELECT id, title, description, instructions, status, created_at, updated_at
         FROM forms
-        WHERE status != 'archived'
         ORDER BY updated_at DESC
         "#
     )
@@ -138,7 +137,7 @@ pub async fn get_form(
 pub async fn submit_form_with_privacy(
     Path(form_id): Path<String>,
     State(state): State<AppState>,
-    Json(req): Json<SubmitFormRequestV3>,
+    Json(req): Json<SubmitFormRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     // Validate request
     req.validate()
@@ -464,8 +463,50 @@ pub struct ImportQuestion {
     pub title: String,
     pub question_type: String,
     pub is_required: bool,
-    pub position: i32,
+    #[serde(default)]
+    pub allow_comment: bool,
     pub help_text: Option<String>,
+    pub position: i32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateFormRequest {
+    pub title: String,
+    pub description: Option<String>,
+    pub welcome_message: Option<String>,
+    pub closing_message: Option<String>,
+    pub status: String,
+    pub settings: Option<JsonValue>,
+    pub sections: Vec<UpdateSection>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateSection {
+    pub id: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub position: i32,
+    pub questions: Vec<UpdateQuestion>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct StatusUpdateRequest {
+    pub status: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateQuestion {
+    pub id: String,
+    pub title: String,
+    pub question_type: String,
+    pub is_required: bool,
+    pub allow_comment: Option<bool>,
+    pub help_text: Option<String>,
+    pub position: i32,
+    pub placeholder: Option<String>,
+    #[serde(rename = "charLimit")]
+    pub char_limit: Option<i32>,
+    pub rows: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -563,7 +604,7 @@ pub async fn import_form(
             .map_err(|e| AppError::Database(e))?;
     }
 
-    // Insert the form
+    // Insert the form (always start as draft)
     let now = Utc::now();
     sqlx::query(
         r#"
@@ -575,7 +616,7 @@ pub async fn import_form(
     .bind(&form_data.title)
     .bind(&form_data.description)
     .bind(&form_data.welcome_message)
-    .bind(&form_data.status)
+    .bind("draft")  // Always start imported forms as draft
     .bind(now.to_rfc3339())
     .bind(now.to_rfc3339())
     .execute(&mut *tx)
@@ -636,5 +677,349 @@ pub async fn import_form(
         "message": "Form imported successfully",
         "form_id": form_data.id,
         "title": form_data.title
+    })))
+}
+
+/// Update an existing form (admin only)
+pub async fn update_form(
+    Path(form_id): Path<String>,
+    Query(auth): Query<AuthQuery>,
+    State(state): State<AppState>,
+    Json(form_data): Json<UpdateFormRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    // Check admin token
+    if auth.token != state.admin_token {
+        return Err(AppError::Unauthorized("Invalid admin token".to_string()));
+    }
+
+    // Start a transaction
+    let mut tx = state.db.begin().await.map_err(|e| AppError::Database(e))?;
+
+    // Check if form exists
+    let existing: Option<(String,)> = sqlx::query_as(
+        "SELECT id FROM forms WHERE id = ?"
+    )
+    .bind(&form_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| AppError::Database(e))?;
+
+    if existing.is_none() {
+        return Err(AppError::BadRequest("Form not found".to_string()));
+    }
+
+    // Update the form metadata
+    let now = Utc::now();
+    sqlx::query(
+        r#"
+        UPDATE forms 
+        SET title = ?, description = ?, instructions = ?, status = ?, updated_at = ?
+        WHERE id = ?
+        "#
+    )
+    .bind(&form_data.title)
+    .bind(&form_data.description)
+    .bind(&form_data.welcome_message)
+    .bind(&form_data.status)
+    .bind(now.to_rfc3339())
+    .bind(&form_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| AppError::Database(e))?;
+
+    // Delete existing sections and questions (cascade will handle questions)
+    sqlx::query("DELETE FROM questions WHERE form_id = ?")
+        .bind(&form_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError::Database(e))?;
+
+    sqlx::query("DELETE FROM sections WHERE form_id = ?")
+        .bind(&form_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError::Database(e))?;
+
+    // Re-insert sections and questions
+    let mut global_question_position = 0;
+    for section in form_data.sections {
+        // Insert section
+        sqlx::query(
+            r#"
+            INSERT INTO sections (id, form_id, title, description, position)
+            VALUES (?, ?, ?, ?, ?)
+            "#
+        )
+        .bind(&section.id)
+        .bind(&form_id)
+        .bind(&section.title)
+        .bind(&section.description)
+        .bind(section.position)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError::Database(e))?;
+
+        // Insert questions for this section
+        for question in section.questions {
+            global_question_position += 1;
+            let mut features = json!({
+                "required": question.is_required,
+            });
+            
+            if let Some(allow_comment) = question.allow_comment {
+                features["allowComment"] = json!(allow_comment);
+            }
+            if let Some(placeholder) = &question.placeholder {
+                features["placeholder"] = json!(placeholder);
+            }
+            if let Some(char_limit) = question.char_limit {
+                features["charLimit"] = json!(char_limit);
+            }
+            if let Some(rows) = question.rows {
+                features["rows"] = json!(rows);
+            }
+
+            sqlx::query(
+                r#"
+                INSERT INTO questions (id, form_id, section_id, position, type, title, description, features)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                "#
+            )
+            .bind(&question.id)
+            .bind(&form_id)
+            .bind(&section.id)
+            .bind(global_question_position)
+            .bind(&question.question_type)
+            .bind(&question.title)
+            .bind(&question.help_text)
+            .bind(features.to_string())
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| AppError::Database(e))?;
+        }
+    }
+
+    // Commit the transaction
+    tx.commit().await.map_err(|e| AppError::Database(e))?;
+
+    Ok(Json(json!({
+        "message": "Form updated successfully",
+        "form_id": form_id
+    })))
+}
+
+/// Clone a form (admin only)
+pub async fn clone_form(
+    Path(form_id): Path<String>,
+    Query(auth): Query<AuthQuery>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, AppError> {
+    // Check admin token
+    if auth.token != state.admin_token {
+        return Err(AppError::Unauthorized("Invalid admin token".to_string()));
+    }
+
+    // Start a transaction
+    let mut tx = state.db.begin().await.map_err(|e| AppError::Database(e))?;
+
+    // Get the original form
+    let original_form: Option<(String, String, Option<String>, Option<String>, String)> = 
+        sqlx::query_as(
+            "SELECT id, title, description, instructions, status FROM forms WHERE id = ?"
+        )
+        .bind(&form_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| AppError::Database(e))?;
+
+    let original_form = original_form.ok_or_else(|| AppError::BadRequest("Form not found".to_string()))?;
+
+    // Generate new IDs
+    let new_form_id = format!("{}-copy-{}", form_id, Utc::now().timestamp());
+    let new_title = format!("{} (Copy)", original_form.1);
+
+    // Insert the cloned form
+    let now = Utc::now();
+    sqlx::query(
+        r#"
+        INSERT INTO forms (id, title, description, instructions, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, 'draft', ?, ?)
+        "#
+    )
+    .bind(&new_form_id)
+    .bind(&new_title)
+    .bind(&original_form.2)
+    .bind(&original_form.3)
+    .bind(now.to_rfc3339())
+    .bind(now.to_rfc3339())
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| AppError::Database(e))?;
+
+    // Clone sections
+    let sections: Vec<(String, String, Option<String>, i32)> = sqlx::query_as(
+        "SELECT id, title, description, position FROM sections WHERE form_id = ? ORDER BY position"
+    )
+    .bind(&form_id)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(|e| AppError::Database(e))?;
+
+    for (old_section_id, title, description, position) in sections {
+        let new_section_id = format!("{}-{}", old_section_id, Utc::now().timestamp_nanos_opt().unwrap());
+        
+        // Insert cloned section
+        sqlx::query(
+            r#"
+            INSERT INTO sections (id, form_id, title, description, position)
+            VALUES (?, ?, ?, ?, ?)
+            "#
+        )
+        .bind(&new_section_id)
+        .bind(&new_form_id)
+        .bind(&title)
+        .bind(&description)
+        .bind(position)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError::Database(e))?;
+
+        // Clone questions for this section
+        let questions: Vec<(String, i32, String, String, Option<String>, String)> = sqlx::query_as(
+            r#"
+            SELECT id, position, type, title, description, features 
+            FROM questions 
+            WHERE form_id = ? AND section_id = ? 
+            ORDER BY position
+            "#
+        )
+        .bind(&form_id)
+        .bind(&old_section_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| AppError::Database(e))?;
+
+        for (old_q_id, position, q_type, title, description, features) in questions {
+            let new_q_id = format!("{}-{}", old_q_id, Utc::now().timestamp_nanos_opt().unwrap());
+            
+            sqlx::query(
+                r#"
+                INSERT INTO questions (id, form_id, section_id, position, type, title, description, features)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                "#
+            )
+            .bind(&new_q_id)
+            .bind(&new_form_id)
+            .bind(&new_section_id)
+            .bind(position)
+            .bind(&q_type)
+            .bind(&title)
+            .bind(&description)
+            .bind(&features)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| AppError::Database(e))?;
+        }
+    }
+
+    // Commit the transaction
+    tx.commit().await.map_err(|e| AppError::Database(e))?;
+
+    Ok(Json(json!({
+        "message": "Form cloned successfully",
+        "form_id": new_form_id,
+        "title": new_title
+    })))
+}
+
+/// Update form status (admin only)
+pub async fn update_form_status(
+    Path(form_id): Path<String>,
+    Query(auth): Query<AuthQuery>,
+    State(state): State<AppState>,
+    Json(status_update): Json<StatusUpdateRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    // Check admin token
+    if auth.token != state.admin_token {
+        return Err(AppError::Unauthorized("Invalid admin token".to_string()));
+    }
+
+    // Validate status
+    if !["draft", "published", "finished", "archived"].contains(&status_update.status.as_str()) {
+        return Err(AppError::BadRequest("Invalid status. Must be draft, published, finished, or archived".to_string()));
+    }
+
+    // Update the form status
+    let now = Utc::now();
+    let result = sqlx::query(
+        r#"
+        UPDATE forms 
+        SET status = ?, updated_at = ?
+        WHERE id = ?
+        "#
+    )
+    .bind(&status_update.status)
+    .bind(now.to_rfc3339())
+    .bind(&form_id)
+    .execute(&state.db)
+    .await
+    .map_err(|e| AppError::Database(e))?;
+
+    if result.rows_affected() == 0 {
+        return Err(AppError::BadRequest("Form not found".to_string()));
+    }
+
+    Ok(Json(json!({
+        "message": format!("Form status updated to {}", status_update.status),
+        "form_id": form_id,
+        "status": status_update.status
+    })))
+}
+
+/// Delete a form (admin only)
+pub async fn delete_form(
+    Path(form_id): Path<String>,
+    Query(auth): Query<AuthQuery>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, AppError> {
+    // Check admin token
+    if auth.token != state.admin_token {
+        return Err(AppError::Unauthorized("Invalid admin token".to_string()));
+    }
+
+    // Check if form has responses
+    let response_count: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM responses WHERE form_id = ?"
+    )
+    .bind(&form_id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| AppError::Database(e))?;
+
+    if response_count.0 > 0 {
+        return Err(AppError::BadRequest("Cannot delete form with existing responses".to_string()));
+    }
+
+    // Delete form (cascade will handle sections and questions)
+    sqlx::query("DELETE FROM questions WHERE form_id = ?")
+        .bind(&form_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| AppError::Database(e))?;
+
+    sqlx::query("DELETE FROM sections WHERE form_id = ?")
+        .bind(&form_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| AppError::Database(e))?;
+
+    sqlx::query("DELETE FROM forms WHERE id = ?")
+        .bind(&form_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| AppError::Database(e))?;
+
+    Ok(Json(json!({
+        "message": "Form deleted successfully"
     })))
 }

@@ -20,11 +20,13 @@ export default {
     },
     extend: {
       colors: {
-        'rose-quartz': '#A34242',
+        // Custom semantic colors
         'cerulean': '#086788',
+        'cambridge-blue': '#7fb685',
         'gunmetal': '#142421',
         'cream': '#f0f0e0',
-        'cambridge-blue': '#7fb685',
+        'rose-quartz': '#a34242',
+        // Default shadcn colors
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

@@ -4,8 +4,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileSpreadsheet, Upload, Download } from 'lucide-react';
+import { FileSpreadsheet, Upload, Download, FileJson, Edit, Copy, Trash2, Archive, Eye, EyeOff, Plus } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from '@/hooks/use-toast';
 
 interface Form {
   id: string;
@@ -36,6 +47,15 @@ export default function AdminDashboard() {
   const [formStats, setFormStats] = useState<Map<string, FormStats>>(new Map());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
+  const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
+  
+  // Dialog states
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [selectedForm, setSelectedForm] = useState<{ id: string; title: string } | null>(null);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{ formId: string; newStatus: string } | null>(null);
 
   useEffect(() => {
     // Check if there's a saved token in sessionStorage
@@ -125,6 +145,194 @@ export default function AdminDashboard() {
   const navigateToFormResults = (formId: string) => {
     // Navigate to form-specific results page, passing the token
     navigate(`/admin/forms/${formId}`, { state: { token } });
+  };
+
+  const handleCloneClick = (formId: string, formTitle: string) => {
+    setSelectedForm({ id: formId, title: formTitle });
+    setCloneDialogOpen(true);
+  };
+
+  const cloneForm = async () => {
+    if (!selectedForm) return;
+    
+    try {
+      const response = await fetch(`/api/admin/forms/${selectedForm.id}/clone?token=${token}`, {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to clone form');
+      }
+      
+      const result = await response.json();
+      toast({
+        title: "Form cloned successfully",
+        description: `Created "${result.title}"`,
+        variant: "success",
+      });
+      
+      // Refresh the forms list
+      await fetchDashboardData(token!);
+      setCloneDialogOpen(false);
+    } catch (error) {
+      console.error('Clone error:', error);
+      toast({
+        title: "Failed to clone form",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStatusClick = (formId: string, newStatus: string) => {
+    setPendingStatusChange({ formId, newStatus });
+    setStatusDialogOpen(true);
+  };
+
+  const updateFormStatus = async () => {
+    if (!pendingStatusChange) return;
+    
+    try {
+      const response = await fetch(`/api/admin/forms/${pendingStatusChange.formId}/status?token=${token}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: pendingStatusChange.newStatus }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update form status');
+      }
+      
+      toast({
+        title: "Status updated",
+        description: `Form status changed to ${pendingStatusChange.newStatus}`,
+        variant: "success",
+      });
+      
+      // Refresh the forms list
+      await fetchDashboardData(token!);
+      setStatusDialogOpen(false);
+    } catch (error) {
+      console.error('Status update error:', error);
+      toast({
+        title: "Failed to update form status",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getStatusMessage = () => {
+    if (!pendingStatusChange) return '';
+    
+    const statusMessages = {
+      published: 'Publishing this form will make it available to users.',
+      finished: 'Marking this form as finished will stop accepting new responses but keep it visible.',
+      archived: 'Archiving this form will hide it completely from users.',
+      draft: 'Moving this form to draft will hide it from users.'
+    };
+    
+    return statusMessages[pendingStatusChange.newStatus as keyof typeof statusMessages] || '';
+  };
+
+  const handleDeleteClick = (formId: string, formTitle: string) => {
+    setSelectedForm({ id: formId, title: formTitle });
+    setDeleteDialogOpen(true);
+  };
+
+  const deleteForm = async () => {
+    if (!selectedForm) return;
+    
+    try {
+      const response = await fetch(`/api/admin/forms/${selectedForm.id}?token=${token}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete form');
+      }
+      
+      toast({
+        title: "Form deleted",
+        description: `"${selectedForm.title}" has been deleted successfully`,
+        variant: "success",
+      });
+      
+      // Refresh the forms list
+      await fetchDashboardData(token!);
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({
+        title: "Failed to delete form",
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: "destructive",
+      });
+    }
+  };
+
+  const exportFormAsJSON = async (formId: string, formTitle: string) => {
+    try {
+      // Fetch full form data
+      const formRes = await fetch(`/api/forms/${formId}`);
+      if (!formRes.ok) throw new Error('Failed to load form');
+      const formData = await formRes.json();
+      
+      // Transform to import format
+      const exportData = {
+        id: formData.id,
+        title: formData.title,
+        description: formData.description,
+        welcome_message: formData.welcome_message,
+        closing_message: formData.closing_message,
+        status: formData.status || 'draft',
+        settings: formData.settings || {},
+        sections: formData.sections.map((section: any) => ({
+          id: section.id,
+          title: section.title,
+          description: section.description,
+          position: section.position,
+          questions: section.questions.map((q: any) => ({
+            id: q.id,
+            title: q.title,
+            question_type: q.type,
+            is_required: q.features?.required || false,
+            allow_comment: q.features?.allowComment || false,
+            help_text: q.description || '',
+            position: q.position,
+            placeholder: q.features?.placeholder,
+            charLimit: q.features?.charLimit,
+            rows: q.features?.rows
+          }))
+        }))
+      };
+      
+      // Download as JSON
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      const exportFileDefaultName = `${formId}-${new Date().toISOString().split('T')[0]}.json`;
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+      
+      toast({
+        title: "Form exported",
+        description: `Downloaded ${formTitle} as JSON`,
+        variant: "success",
+      });
+    } catch (error) {
+      console.error('Failed to export form:', error);
+      toast({
+        title: "Export failed",
+        description: "Failed to export form. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const exportFormToExcel = async (formId: string, formTitle: string) => {
@@ -231,27 +439,37 @@ export default function AdminDashboard() {
       a.download = `${formId}-quick-export-${new Date().toISOString().split('T')[0]}.xlsx`;
       a.click();
       window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Excel exported",
+        description: `Downloaded ${formTitle} data as Excel`,
+        variant: "success",
+      });
     } catch (error) {
       console.error('Failed to export Excel:', error);
-      alert('Failed to export Excel file. Please try again.');
+      toast({
+        title: "Export failed",
+        description: "Failed to export Excel file. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   // Show password form if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/20 flex items-center justify-center px-4">
         <Card className="max-w-md w-full shadow-xl">
           <CardHeader className="bg-gradient-to-r from-cambridge-blue to-cerulean text-white">
             <CardTitle className="text-2xl">Admin Access</CardTitle>
-            <CardDescription className="text-cream/90">
+            <CardDescription className="text-white/90">
               Enter your admin password to access the dashboard
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="password" className="text-gunmetal font-semibold">
+                <Label htmlFor="password" className="text-gray-800 font-semibold">
                   Password
                 </Label>
                 <Input
@@ -284,7 +502,7 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 flex items-center justify-center">
-        <div className="text-lg text-gunmetal">Loading dashboard...</div>
+        <div className="text-lg text-gray-800">Loading dashboard...</div>
       </div>
     );
   }
@@ -301,7 +519,7 @@ export default function AdminDashboard() {
             <p>{error}</p>
             <Button 
               onClick={handleLogout} 
-              className="mt-4 bg-gunmetal hover:bg-gunmetal/90"
+              className="mt-4 bg-gray-800 hover:bg-gray-700"
             >
               Try Again
             </Button>
@@ -314,73 +532,138 @@ export default function AdminDashboard() {
   const downloadTemplate = () => {
     const template = {
       id: "unique-form-id",
-      title: "Form Title",
+      title: "Example Form Title",
       description: "Brief description of the form",
       welcome_message: "Welcome message shown at the start",
       closing_message: "Thank you message shown after submission",
-      status: "published",
+      status: "draft",
       settings: {
         allowAnonymous: true,
-        requireEmail: true,
-        estimatedTime: "15-20 minutes",
+        requireEmail: false,
+        estimatedTime: "10-15 minutes",
         confidentialityNotice: "Optional confidentiality notice",
         reviewPeriod: "Optional review period (e.g., Q1 2025)"
       },
       sections: [
         {
           id: "section-1",
-          title: "Section 1 Title",
-          description: "Section 1 description",
+          title: "Rating Questions",
+          description: "Examples of rating-based questions",
           position: 1,
           questions: [
             {
               id: "q1",
-              title: "Example Likert scale question?",
+              title: "How satisfied are you with our service?",
               question_type: "likert",
               is_required: true,
-              allow_comment: true,
-              help_text: "Optional help text for the question",
+              help_text: "Please rate your satisfaction level",
               position: 1
             },
             {
               id: "q2",
-              title: "Example text input question?",
-              question_type: "text",
-              is_required: false,
-              allow_comment: false,
-              help_text: "Optional help text",
-              position: 2,
-              placeholder: "Optional placeholder text",
-              charLimit: 200
-            },
-            {
-              id: "q3",
-              title: "Example long text question?",
-              question_type: "textarea",
-              is_required: false,
-              allow_comment: false,
-              help_text: "Optional help text",
-              position: 3,
-              placeholder: "Optional placeholder for textarea",
-              rows: 5,
-              charLimit: 1000
+              title: "Rate the quality of our product",
+              question_type: "rating",
+              is_required: true,
+              help_text: "1 star = Poor, 5 stars = Excellent",
+              position: 2
             }
           ]
         },
         {
           id: "section-2",
-          title: "Section 2 Title",
-          description: "Section 2 description",
+          title: "Text Input Questions",
+          description: "Examples of text-based questions",
           position: 2,
           questions: [
             {
+              id: "q3",
+              title: "What is your name?",
+              question_type: "text",
+              is_required: false,
+              help_text: "Optional",
+              position: 3,
+              placeholder: "Enter your name",
+              charLimit: 100
+            },
+            {
               id: "q4",
-              title: "Another Likert question?",
-              question_type: "likert",
+              title: "Please provide detailed feedback",
+              question_type: "textarea",
+              is_required: false,
+              help_text: "Share your thoughts in detail",
+              position: 4,
+              placeholder: "Type your feedback here...",
+              rows: 5,
+              charLimit: 500
+            }
+          ]
+        },
+        {
+          id: "section-3",
+          title: "Selection Questions",
+          description: "Examples of choice-based questions",
+          position: 3,
+          questions: [
+            {
+              id: "q5",
+              title: "Select your department",
+              question_type: "dropdown",
               is_required: true,
-              allow_comment: false,
               help_text: "",
-              position: 4
+              position: 5,
+              options: ["Engineering", "Sales", "Marketing", "HR", "Other"]
+            },
+            {
+              id: "q6",
+              title: "Which features do you use? (select all that apply)",
+              question_type: "checkbox",
+              is_required: false,
+              help_text: "You can select multiple options",
+              position: 6,
+              options: ["Feature A", "Feature B", "Feature C", "Feature D"]
+            },
+            {
+              id: "q7",
+              title: "What is your preferred contact method?",
+              question_type: "multiple_choice",
+              is_required: true,
+              help_text: "",
+              position: 7,
+              options: ["Email", "Phone", "Text Message", "Mail"]
+            },
+            {
+              id: "q8",
+              title: "Would you recommend us to others?",
+              question_type: "yes_no",
+              is_required: true,
+              help_text: "",
+              position: 8
+            }
+          ]
+        },
+        {
+          id: "section-4",
+          title: "Numeric and Date Questions",
+          description: "Examples of number and date inputs",
+          position: 4,
+          questions: [
+            {
+              id: "q9",
+              title: "How many years of experience do you have?",
+              question_type: "number",
+              is_required: false,
+              help_text: "",
+              position: 9,
+              min: 0,
+              max: 50
+            },
+            {
+              id: "q10",
+              title: "When would you like to schedule a follow-up?",
+              question_type: "datetime",
+              is_required: false,
+              help_text: "Select a date and time",
+              position: 10
             }
           ]
         }
@@ -423,7 +706,15 @@ export default function AdminDashboard() {
         body: JSON.stringify(config),
       });
 
-      const result = await response.json();
+      let result;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+      } else {
+        // If not JSON, get the text response
+        const text = await response.text();
+        result = { error: text };
+      }
       
       if (!response.ok) {
         throw new Error(result.error || 'Failed to import form');
@@ -447,10 +738,10 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-white via-cerulean/10 to-cerulean/20 py-8 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gunmetal">Admin Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
           <div className="flex gap-2">
             <input
               ref={fileInputRef}
@@ -461,24 +752,31 @@ export default function AdminDashboard() {
               id="form-upload"
             />
             <Button
+              onClick={() => navigate('/admin/forms/new')}
+              className="bg-cerulean hover:bg-cerulean/90 text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create Form
+            </Button>
+            <Button
               onClick={downloadTemplate}
               variant="outline"
-              className="border-cambridge-blue text-cambridge-blue hover:bg-cambridge-blue hover:text-white"
+              className="bg-white border-cambridge-blue text-cambridge-blue hover:bg-cambridge-blue hover:text-white"
             >
               <Download className="w-4 h-4 mr-2" />
-              Download Template
+              Template
             </Button>
             <Button
               onClick={() => fileInputRef.current?.click()}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
               <Upload className="w-4 h-4 mr-2" />
-              Import Form
+              Import
             </Button>
             <Button 
               onClick={handleLogout}
               variant="outline"
-              className="border-gunmetal text-gunmetal hover:bg-gunmetal hover:text-white"
+              className="border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white"
             >
               Logout
             </Button>
@@ -497,7 +795,61 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {forms.length === 0 ? (
+        {/* Status Tabs */}
+        <div className="mb-6 border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('active')}
+              className={`
+                py-2 px-1 border-b-2 font-medium text-sm
+                ${activeTab === 'active'
+                  ? 'border-cerulean text-cerulean'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }
+              `}
+            >
+              Active Forms
+              {forms.filter(f => f.status !== 'archived').length > 0 && (
+                <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                  activeTab === 'active'
+                    ? 'bg-cerulean text-white'
+                    : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {forms.filter(f => f.status !== 'archived').length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('archived')}
+              className={`
+                py-2 px-1 border-b-2 font-medium text-sm
+                ${activeTab === 'archived'
+                  ? 'border-cerulean text-cerulean'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }
+              `}
+            >
+              Archived
+              {forms.filter(f => f.status === 'archived').length > 0 && (
+                <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                  activeTab === 'archived'
+                    ? 'bg-cerulean text-white'
+                    : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {forms.filter(f => f.status === 'archived').length}
+                </span>
+              )}
+            </button>
+          </nav>
+        </div>
+
+        {(() => {
+          const filteredForms = activeTab === 'active' 
+            ? forms.filter(f => f.status !== 'archived')  // draft, published, and finished are all "active"
+            : forms.filter(f => f.status === 'archived');
+          
+          if (forms.length === 0) {
+            return (
           <Card className="border-2 border-dashed border-gray-300">
             <CardContent className="text-center py-12">
               <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
@@ -507,7 +859,7 @@ export default function AdminDashboard() {
                 <Button
                   onClick={downloadTemplate}
                   variant="outline"
-                  className="border-cambridge-blue text-cambridge-blue hover:bg-cambridge-blue hover:text-white"
+                  className="bg-white border-cambridge-blue text-cambridge-blue hover:bg-cambridge-blue hover:text-white"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Download Template
@@ -524,83 +876,333 @@ export default function AdminDashboard() {
                 Download the template, customize it with your questions, then import it back
               </p>
             </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {forms.map(form => {
-              const stats = formStats.get(form.id);
-              const responseCount = stats?.response_count || 0;
-              const lastResponse = stats?.last_response;
-              
-              return (
-                <Card 
-                  key={form.id} 
-                  className="hover:shadow-xl transition-shadow cursor-pointer"
-                  onClick={() => navigateToFormResults(form.id)}
-                >
-                  <CardHeader className="bg-gradient-to-r from-cambridge-blue/10 to-cerulean/10">
-                    <CardTitle className="text-lg">{form.title}</CardTitle>
-                    {form.description && (
-                      <CardDescription className="mt-2">
-                        {form.description}
-                      </CardDescription>
+              </Card>
+            );
+          }
+          
+          if (filteredForms.length === 0) {
+            return (
+              <Card className="border-2 border-dashed border-gray-300">
+                <CardContent className="text-center py-12">
+                  <p className="text-gray-500">No {activeTab} forms</p>
+                </CardContent>
+              </Card>
+            );
+          }
+          
+          const selectedForm = forms.find(f => f.id === selectedFormId);
+          const selectedStats = selectedFormId ? formStats.get(selectedFormId) : null;
+          const selectedResponseCount = selectedStats?.response_count || 0;
+          
+          return (
+            <div className="space-y-4">
+              {/* Persistent Action Bar - Always visible, like Google Drive */}
+              <Card className="p-3 border-b-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    {selectedForm && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-800">{selectedForm.title}</h3>
+                        <p className="text-xs text-gray-500">
+                          {selectedResponseCount} responses
+                        </p>
+                      </div>
                     )}
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Status:</span>
-                        <span className={`text-sm font-medium px-2 py-1 rounded ${
-                          form.status === 'published' 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {form.status}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Responses:</span>
-                        <span className="text-sm font-bold text-gunmetal">
-                          {responseCount}
-                        </span>
-                      </div>
-                      {lastResponse && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600">Last response:</span>
-                          <span className="text-sm text-gray-700">
-                            {new Date(lastResponse).toLocaleDateString()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2 mt-4">
-                      <Button 
-                        className="flex-1 bg-gradient-to-r from-cerulean to-cambridge-blue hover:from-cerulean/90 hover:to-cambridge-blue/90 text-white"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigateToFormResults(form.id);
-                        }}
-                      >
-                        View Results
-                      </Button>
+                    {!selectedForm && (
+                      <p className="text-sm text-gray-500">Select a form to perform actions</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button 
+                      className={`${
+                        selectedForm 
+                          ? 'bg-gradient-to-r from-cerulean to-cambridge-blue hover:from-cerulean/90 hover:to-cambridge-blue/90 text-white' 
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      }`}
+                      onClick={() => selectedForm && navigateToFormResults(selectedForm.id)}
+                      disabled={!selectedForm}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Results
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className={`${
+                        selectedForm && selectedForm.status !== 'archived'
+                          ? 'border-cambridge-blue text-cambridge-blue hover:bg-cambridge-blue hover:text-white'
+                          : 'border-gray-200 text-gray-400 cursor-not-allowed'
+                      }`}
+                      onClick={() => selectedForm && navigate(`/admin/forms/${selectedForm.id}/edit`)}
+                      disabled={!selectedForm || selectedForm?.status === 'archived'}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit
+                    </Button>
+                    
+                    <div className="h-6 w-px bg-gray-300 mx-1" />
+                    
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className={selectedForm ? '' : 'text-gray-400 cursor-not-allowed'}
+                      onClick={() => selectedForm && exportFormAsJSON(selectedForm.id, selectedForm.title)}
+                      disabled={!selectedForm}
+                      title="Export as JSON"
+                    >
+                      <FileJson className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className={selectedForm ? '' : 'text-gray-400 cursor-not-allowed'}
+                      onClick={() => selectedForm && exportFormToExcel(selectedForm.id, selectedForm.title)}
+                      disabled={!selectedForm}
+                      title="Export Excel"
+                    >
+                      <FileSpreadsheet className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className={selectedForm ? '' : 'text-gray-400 cursor-not-allowed'}
+                      onClick={() => selectedForm && handleCloneClick(selectedForm.id, selectedForm.title)}
+                      disabled={!selectedForm}
+                      title="Clone Form"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                    
+                    <div className="h-6 w-px bg-gray-300 mx-1" />
+                    
+                    {/* Status change buttons - show the relevant ones based on current status */}
+                    {selectedForm?.status === 'draft' && (
                       <Button
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          exportFormToExcel(form.id, form.title);
-                        }}
-                        title="Quick Excel Export"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleStatusClick(selectedForm.id, 'published')}
+                        title="Publish Form"
                       >
-                        <FileSpreadsheet className="w-4 h-4" />
+                        <Eye className="w-4 h-4" />
                       </Button>
+                    )}
+                    {selectedForm?.status === 'published' && (
+                      <>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleStatusClick(selectedForm.id, 'finished')}
+                          title="Mark as Finished"
+                        >
+                          <Archive className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleStatusClick(selectedForm.id, 'draft')}
+                          title="Move to Draft"
+                        >
+                          <EyeOff className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
+                    {selectedForm?.status === 'finished' && (
+                      <>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleStatusClick(selectedForm.id, 'published')}
+                          title="Reopen Form"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleStatusClick(selectedForm.id, 'archived')}
+                          title="Archive Form"
+                        >
+                          <Archive className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
+                    {selectedForm?.status === 'archived' && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleStatusClick(selectedForm.id, 'draft')}
+                        title="Move to Draft"
+                      >
+                        <EyeOff className="w-4 h-4" />
+                      </Button>
+                    )}
+                    
+                    <div className="h-6 w-px bg-gray-300 mx-1" />
+                    
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className={
+                        selectedForm && (selectedForm.status === 'draft' || selectedForm.status === 'archived') && selectedResponseCount === 0
+                          ? 'text-red-600 hover:text-red-700'
+                          : 'text-gray-400 cursor-not-allowed'
+                      }
+                      onClick={() => selectedForm && handleDeleteClick(selectedForm.id, selectedForm.title)}
+                      disabled={!selectedForm || !(selectedForm?.status === 'draft' || selectedForm?.status === 'archived') || selectedResponseCount > 0}
+                      title="Delete Form"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+              
+              {/* Table View */}
+              <Card>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Form Title
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Responses
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Last Response
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Updated
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredForms.map(form => {
+                        const stats = formStats.get(form.id);
+                        const responseCount = stats?.response_count || 0;
+                        const lastResponse = stats?.last_response;
+                        const isSelected = selectedFormId === form.id;
+                        
+                        return (
+                          <tr 
+                            key={form.id}
+                            onClick={() => setSelectedFormId(isSelected ? null : form.id)}
+                            className={`cursor-pointer transition-colors ${
+                              isSelected 
+                                ? 'bg-cerulean/10' 
+                                : 'hover:bg-gray-50'
+                            }`}
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {form.title}
+                                </div>
+                                {form.description && (
+                                  <div className="text-sm text-gray-500">
+                                    {form.description}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex text-xs font-medium px-2.5 py-0.5 rounded-full ${
+                                form.status === 'published' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : form.status === 'draft'
+                                  ? 'bg-gray-100 text-gray-600'
+                                  : form.status === 'finished'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {form.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-center">
+                              <span className="text-sm font-semibold text-gray-900">
+                                {responseCount}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {lastResponse 
+                                ? new Date(lastResponse).toLocaleDateString() 
+                                : '—'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(form.updated_at).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {filteredForms.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      No forms to display
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+                  )}
+                </div>
+              </Card>
+            </div>
+          );
+        })()}
       </div>
+      
+      {/* Clone Dialog */}
+      <AlertDialog open={cloneDialogOpen} onOpenChange={setCloneDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clone Form</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to clone "{selectedForm?.title}"? This will create a duplicate of the form with all its questions.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={cloneForm}>Clone</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Delete Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Form</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{selectedForm?.title}"? This will permanently delete the form and all its questions. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={deleteForm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Status Change Dialog */}
+      <AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change Form Status</AlertDialogTitle>
+            <AlertDialogDescription>
+              {getStatusMessage()} Do you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={updateFormStatus}>Confirm</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

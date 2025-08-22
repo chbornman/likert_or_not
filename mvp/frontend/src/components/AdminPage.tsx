@@ -112,14 +112,14 @@ export default function AdminPage() {
         <Card className="max-w-md w-full shadow-xl">
           <CardHeader className="bg-gradient-to-r from-cambridge-blue to-cerulean text-white">
             <CardTitle className="text-2xl">Admin Access</CardTitle>
-            <CardDescription className="text-cream/90">
+            <CardDescription className="text-stone-100/90">
               Enter your admin password to view responses
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="password" className="text-gunmetal font-semibold">
+                <Label htmlFor="password" className="text-gray-800 font-semibold">
                   Password
                 </Label>
                 <Input
@@ -152,7 +152,7 @@ export default function AdminPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 flex items-center justify-center">
-        <div className="text-lg text-gunmetal">Loading admin dashboard...</div>
+        <div className="text-lg text-gray-800">Loading admin dashboard...</div>
       </div>
     );
   }
@@ -168,7 +168,7 @@ export default function AdminPage() {
             <p>{error}</p>
             <Button 
               onClick={handleLogout} 
-              className="mt-4 bg-gunmetal hover:bg-gunmetal/90"
+              className="mt-4 bg-gray-800 hover:bg-gray-700"
             >
               Try Again
             </Button>
@@ -182,7 +182,7 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 py-4 sm:py-8 px-0 sm:px-4">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         <div className="flex justify-between items-center mb-6 sm:mb-8 px-4 sm:px-0">
-          <h1 className="text-2xl sm:text-4xl font-bold text-gunmetal">Admin Dashboard</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold text-gray-800">Admin Dashboard</h1>
           <div className="flex gap-2">
             <Button 
               onClick={handleExport}
@@ -193,7 +193,7 @@ export default function AdminPage() {
             <Button 
               onClick={handleLogout}
               variant="outline"
-              className="border-gunmetal text-gunmetal hover:bg-gunmetal hover:text-white px-4 sm:px-6 py-2 sm:py-3"
+              className="border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white px-4 sm:px-6 py-2 sm:py-3"
             >
               Logout
             </Button>
@@ -205,7 +205,7 @@ export default function AdminPage() {
         <Card className="shadow-none sm:shadow-xl border-0 bg-white sm:bg-white/95 backdrop-blur overflow-hidden rounded-none sm:rounded-lg">
           <CardHeader className="bg-gradient-to-r from-cerulean to-cambridge-blue text-white rounded-none sm:rounded-t-lg px-4 sm:px-6">
             <CardTitle>Results</CardTitle>
-            <CardDescription className="text-cream/90">Scale: 1 (Strongly Disagree) to 5 (Strongly Agree)</CardDescription>
+            <CardDescription className="text-stone-100/90">Scale: 1 (Strongly Disagree) to 5 (Strongly Agree)</CardDescription>
           </CardHeader>
           <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
             <div className="space-y-2 sm:space-y-4">
@@ -243,15 +243,15 @@ export default function AdminPage() {
                         }
                         setExpandedSections(newExpanded);
                       }}
-                      className="w-full p-4 bg-gradient-to-r from-cream/30 to-cambridge-blue/10 hover:from-cream/40 hover:to-cambridge-blue/20 transition-all"
+                      className="w-full p-4 bg-gradient-to-r from-stone-100/30 to-cambridge-blue/10 hover:from-stone-100/40 hover:to-cambridge-blue/20 transition-all"
                     >
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                        <h3 className="font-bold text-lg text-gunmetal text-left">
+                        <h3 className="font-bold text-lg text-gray-800 text-left">
                           {section.title}
                         </h3>
                         <div className="flex items-center justify-between sm:justify-end gap-3">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm text-gunmetal/60">Section Avg:</span>
+                            <span className="text-sm text-gray-600">Section Avg:</span>
                             <span className="font-bold text-xl text-cerulean">
                               {sectionAverage.toFixed(2)}
                             </span>
@@ -273,24 +273,24 @@ export default function AdminPage() {
                     {isExpanded && (
                       <div className="p-4 space-y-4 border-t border-cambridge-blue/20">
                         {sectionQuestions.map((question, idx) => (
-                          <div key={question.question_id || `q-${section.start + idx}`} className="p-4 rounded-lg bg-gradient-to-r from-cream/30 to-cambridge-blue/10">
+                          <div key={question.question_id || `q-${section.start + idx}`} className="p-4 rounded-lg bg-gradient-to-r from-stone-100/30 to-cambridge-blue/10">
                             <div className="space-y-3">
                               {/* Question text with number */}
                               <div className="flex gap-3">
                                 <span className="font-bold text-cerulean text-sm flex-shrink-0">
                                   {question.position || (section.start + idx)}.
                                 </span>
-                                <span className="text-sm text-gunmetal flex-1">
+                                <span className="text-sm text-gray-800 flex-1">
                                   {question.question_text}
                                 </span>
                               </div>
                               
                               {/* Score and responses - centered */}
                               <div className="flex justify-center items-center gap-3">
-                                <span className="font-bold text-lg text-gunmetal">
+                                <span className="font-bold text-lg text-gray-800">
                                   {question.average_score.toFixed(2)}
                                 </span>
-                                <span className="text-xs text-gunmetal/60">
+                                <span className="text-xs text-gray-600">
                                   ({question.response_count} responses)
                                 </span>
                               </div>
@@ -306,10 +306,10 @@ export default function AdminPage() {
                               {/* Comments if available */}
                               {'comments' in question && Array.isArray((question as any).comments) && (question as any).comments.length > 0 && (
                                 <div className="mt-3 space-y-2">
-                                  <p className="text-xs font-semibold text-gunmetal/70">Comments:</p>
+                                  <p className="text-xs font-semibold text-gray-700">Comments:</p>
                                   <div className="space-y-1">
                                     {(question as any).comments.map((comment: string, commentIdx: number) => (
-                                      <div key={commentIdx} className="text-xs text-gunmetal/60 bg-white/50 p-2 rounded italic">
+                                      <div key={commentIdx} className="text-xs text-gray-600 bg-white/50 p-2 rounded italic">
                                         "{comment}"
                                       </div>
                                     ))}
@@ -333,12 +333,12 @@ export default function AdminPage() {
             <div className="flex justify-between items-start">
               <div>
                 <CardTitle>All Responses</CardTitle>
-                <CardDescription className="text-cream/90 mt-1">Click on a response to view details</CardDescription>
+                <CardDescription className="text-stone-100/90 mt-1">Click on a response to view details</CardDescription>
               </div>
               {stats && (
                 <div className="text-right">
                   <div className="text-3xl font-bold text-white">{stats.total_responses}</div>
-                  <div className="text-xs text-cream/70">Total</div>
+                  <div className="text-xs text-stone-100/70">Total</div>
                 </div>
               )}
             </div>
@@ -353,11 +353,11 @@ export default function AdminPage() {
                   >
                     <div className="flex justify-between">
                       <div>
-                        <div className="font-semibold text-gunmetal">{r.response.respondent_name}</div>
-                        <div className="text-sm text-gunmetal/60">{r.response.respondent_email}</div>
+                        <div className="font-semibold text-gray-800">{r.response.respondent_name}</div>
+                        <div className="text-sm text-gray-600">{r.response.respondent_email}</div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="text-sm text-gunmetal/60">
+                        <div className="text-sm text-gray-600">
                           {new Date(r.response.submitted_at).toLocaleString()}
                         </div>
                         <svg 
@@ -375,22 +375,22 @@ export default function AdminPage() {
                   </div>
                   
                   {selectedResponse?.response.id === r.response.id && (
-                    <div className="ml-4 mr-4 p-4 bg-gradient-to-r from-cream/30 to-cambridge-blue/10 rounded-lg">
+                    <div className="ml-4 mr-4 p-4 bg-gradient-to-r from-stone-100/30 to-cambridge-blue/10 rounded-lg">
                       <div className="space-y-4">
                         {selectedResponse.answers.map((answer, idx) => (
                           <div key={idx} className="border-b border-cambridge-blue/20 pb-4 last:border-0">
                             <div className="flex gap-3">
                               <span className="text-cerulean font-bold flex-shrink-0 text-sm">{idx + 1}.</span>
                               <div className="flex-1 space-y-2">
-                                <div className="text-sm text-gunmetal">
+                                <div className="text-sm text-gray-800">
                                   {answer.question_text}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-3">
                                   <span className="text-xs bg-cambridge-blue/20 px-2 py-1 rounded-full">
-                                    Score: <span className="font-bold text-gunmetal">{answer.likert_value || 'N/A'}</span>
+                                    Score: <span className="font-bold text-gray-800">{answer.likert_value || 'N/A'}</span>
                                   </span>
                                   {answer.comment && (
-                                    <span className="text-xs text-gunmetal/70 italic bg-cream/30 px-2 py-1 rounded">
+                                    <span className="text-xs text-gray-700 italic bg-stone-100/30 px-2 py-1 rounded">
                                       "{answer.comment}"
                                     </span>
                                   )}

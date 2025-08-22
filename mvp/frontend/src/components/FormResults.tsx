@@ -340,7 +340,7 @@ export default function FormResults() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 flex items-center justify-center">
-        <div className="text-lg text-gunmetal">Loading results...</div>
+        <div className="text-lg text-gray-800">Loading results...</div>
       </div>
     );
   }
@@ -356,7 +356,7 @@ export default function FormResults() {
             <p>{error}</p>
             <Button 
               onClick={() => navigate('/admin')} 
-              className="mt-4 bg-gunmetal hover:bg-gunmetal/90"
+              className="mt-4 bg-gray-800 hover:bg-gray-700"
             >
               Back to Dashboard
             </Button>
@@ -374,7 +374,7 @@ export default function FormResults() {
           <Button
             variant="ghost"
             onClick={() => navigate('/admin', { state: { token } })}
-            className="mb-4 text-gunmetal hover:text-gunmetal/80"
+            className="mb-4 text-gray-800 hover:text-gray-800/80"
           >
             <ChevronLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
@@ -382,7 +382,7 @@ export default function FormResults() {
           
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold text-gunmetal">{form?.title}</h1>
+              <h1 className="text-3xl font-bold text-gray-800">{form?.title}</h1>
               {form?.description && (
                 <p className="text-gray-600 mt-2">{form.description}</p>
               )}
@@ -405,7 +405,7 @@ export default function FormResults() {
               <CardDescription>Total Responses</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gunmetal">{responses.length}</div>
+              <div className="text-2xl font-bold text-gray-800">{responses.length}</div>
             </CardContent>
           </Card>
           <Card>
@@ -458,7 +458,7 @@ export default function FormResults() {
 
               return (
                 <div key={section.id} className="mb-8 last:mb-0">
-                  <h3 className="text-lg font-semibold text-gunmetal mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
                     {section.title}
                   </h3>
                   <div className="space-y-4">
@@ -478,7 +478,7 @@ export default function FormResults() {
 
                         return (
                           <div key={question.id} className="border-l-4 border-cambridge-blue/30 pl-4">
-                            <p className="font-medium text-gunmetal mb-2">
+                            <p className="font-medium text-gray-800 mb-2">
                               {question.title}
                             </p>
                             <div className="flex items-center gap-6 text-sm">
@@ -512,7 +512,7 @@ export default function FormResults() {
                         const textResponses = questionResponses.filter(a => a.text_value);
                         return (
                           <div key={question.id} className="border-l-4 border-cerulean/30 pl-4">
-                            <p className="font-medium text-gunmetal mb-2">
+                            <p className="font-medium text-gray-800 mb-2">
                               {question.title}
                             </p>
                             <div className="text-sm">

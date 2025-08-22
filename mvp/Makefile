@@ -9,7 +9,7 @@ install: ## Install dependencies for local development
 	cd frontend && npm install
 
 dev: ## Start development environment with Docker Compose
-	docker-compose -f docker-compose.dev.yml up
+	docker compose -f docker-compose.dev.yml up
 
 dev-local: ## Start local development without Docker
 	@echo "Starting backend..."
@@ -18,22 +18,22 @@ dev-local: ## Start local development without Docker
 	cd frontend && npm run dev
 
 build: ## Build production Docker image
-	docker-compose build
+	docker compose build
 
 prod: ## Start production environment
-	docker-compose up -d
+	docker compose up -d
 
 logs: ## View production logs
-	docker-compose logs -f
+	docker compose logs -f
 
 stop: ## Stop all containers
-	docker-compose down
-	docker-compose -f docker-compose.dev.yml down
+	docker compose down
+	docker compose -f docker-compose.dev.yml down
 
 clean: ## Clean build artifacts and data
 	rm -rf backend/target frontend/dist frontend/node_modules data
-	docker-compose down -v
-	docker-compose -f docker-compose.dev.yml down -v
+	docker compose down -v
+	docker compose -f docker-compose.dev.yml down -v
 
 reset-db: ## Reset the database (WARNING: deletes all data)
 	rm -f data/*.db data/*.db-shm data/*.db-wal

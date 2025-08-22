@@ -270,6 +270,110 @@ Returns all responses for a form including personally identifiable information.
 
 Alternative endpoint for getting form responses with PII. Currently does not require authentication (should be added in production).
 
+### Update Form
+**PUT** `/api/admin/forms/{form_id}?token={admin_token}`
+
+Update an existing form configuration. This replaces all sections and questions.
+
+**Request Body:**
+```json
+{
+  "title": "Updated Form Title",
+  "description": "Updated description",
+  "welcome_message": "Updated welcome message",
+  "closing_message": "Updated closing message",
+  "status": "draft|published|archived",
+  "settings": {
+    "allowAnonymous": true,
+    "requireEmail": false
+  },
+  "sections": [
+    {
+      "id": "section-1",
+      "title": "Section Title",
+      "description": "Section description",
+      "position": 1,
+      "questions": [
+        {
+          "id": "q1",
+          "title": "Question text",
+          "question_type": "likert",
+          "is_required": true,
+          "allow_comment": true,
+          "help_text": "Help text",
+          "position": 1,
+          "placeholder": "For text inputs",
+          "charLimit": 500,
+          "rows": 5
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Form updated successfully",
+  "form_id": "form-id"
+}
+```
+
+### Clone Form
+**POST** `/api/admin/forms/{form_id}/clone?token={admin_token}`
+
+Create a copy of an existing form with a new ID. The cloned form will be created in draft status.
+
+**Response:**
+```json
+{
+  "message": "Form cloned successfully",
+  "form_id": "new-form-id",
+  "title": "Original Title (Copy)"
+}
+```
+
+### Update Form Status
+**PATCH** `/api/admin/forms/{form_id}/status?token={admin_token}`
+
+Update the status of a form (draft, published, or archived).
+
+**Request Body:**
+```json
+{
+  "status": "published"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Form status updated to published",
+  "form_id": "form-id",
+  "status": "published"
+}
+```
+
+### Delete Form
+**DELETE** `/api/admin/forms/{form_id}?token={admin_token}`
+
+Delete a form. Only forms without responses can be deleted.
+
+**Response:**
+```json
+{
+  "message": "Form deleted successfully"
+}
+```
+
+**Error Response (if form has responses):**
+```json
+{
+  "error": "Cannot delete form with existing responses"
+}
+```
+
 ### Delete Respondent PII
 **DELETE** `/api/admin/respondents/{respondent_id}?token={admin_token}`
 
@@ -284,6 +388,21 @@ Delete personally identifiable information for a specific respondent while prese
 
 ---
 
+## Admin Features
+
+### Form Management
+- **Create**: Create new forms from scratch or templates
+- **Edit**: Modify form structure, questions, and settings
+- **Status Management**: Toggle between draft, published, and archived states
+- **Export**: Download forms as JSON for backup or sharing
+- **Import**: Upload JSON form configurations
+- **Delete**: Remove forms (only if no responses exist)
+
+### Dashboard Organization
+- **Status Tabs**: Forms organized by draft, published, and archived status
+- **Quick Actions**: Export to Excel, Export to JSON, Edit, Clone, Delete
+- **Response Tracking**: View response counts and last submission dates
+
 ## Data Models
 
 ### Question Types
@@ -292,7 +411,7 @@ Delete personally identifiable information for a specific respondent while prese
 - `textarea`: Multi-line text input
 
 ### Form Status
-- `draft`: Form is being edited
+- `draft`: Form is being edited, not visible to users
 - `published`: Form is available for responses
 - `archived`: Form is no longer accepting responses
 

@@ -6,7 +6,7 @@ mod error;
 
 use axum::{
     Router,
-    routing::{get, post, put, delete},
+    routing::{get, post, put, delete, patch},
 };
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
@@ -91,6 +91,10 @@ fn build_full_app(app_state: AppState) -> Router {
         .route("/api/admin/stats", get(handlers::get_admin_stats))
         .route("/api/admin/responses", get(handlers::get_admin_responses))
         .route("/api/admin/import-form", post(handlers::import_form))
+        .route("/api/admin/forms/{form_id}", put(handlers::update_form))
+        .route("/api/admin/forms/{form_id}", delete(handlers::delete_form))
+        .route("/api/admin/forms/{form_id}/clone", post(handlers::clone_form))
+        .route("/api/admin/forms/{form_id}/status", patch(handlers::update_form_status))
         .route("/api/admin/forms/{form_id}/responses", get(handlers::get_responses_with_pii))
         .route("/api/admin/respondents/{respondent_id}", delete(handlers::delete_respondent_pii))
         .fallback_service(serve_dir)

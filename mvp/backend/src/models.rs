@@ -17,7 +17,7 @@ pub struct Respondent {
 // ===== Responses (Anonymous) =====
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct ResponseV3 {
+pub struct Response {
     pub id: String,
     pub respondent_id: String,
     pub form_id: String,
@@ -30,7 +30,7 @@ pub struct ResponseV3 {
 // ===== Answers =====
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct AnswerV3 {
+pub struct Answer {
     pub id: String,
     pub response_id: String,
     pub question_id: String,
@@ -41,15 +41,15 @@ pub struct AnswerV3 {
 // ===== Request/Response DTOs =====
 
 #[derive(Debug, Deserialize)]
-pub struct SubmitFormRequestV3 {
+pub struct SubmitFormRequest {
     pub respondent_name: String,
     pub respondent_email: String,
     pub role: Option<String>,
-    pub answers: Vec<AnswerInputV3>,
+    pub answers: Vec<AnswerInput>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct AnswerInputV3 {
+pub struct AnswerInput {
     pub question_id: String,
     pub value: JsonValue,
 }
@@ -107,7 +107,7 @@ pub struct RatingCount {
 
 // ===== Utility functions =====
 
-impl SubmitFormRequestV3 {
+impl SubmitFormRequest {
     pub fn validate(&self) -> Result<(), String> {
         if self.respondent_name.trim().is_empty() {
             return Err("Name is required".to_string());

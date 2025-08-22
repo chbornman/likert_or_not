@@ -18,25 +18,25 @@ const Logo: React.FC<LogoProps> = ({ size = 'medium', showText = true, className
   return (
     <div className={`inline-flex items-center gap-2 ${className}`}>
       <svg width={width} height={height} viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="100" cy="100" r="90" fill="#086788" opacity="0.1"/>
+        <circle cx="100" cy="100" r="90" className="fill-blue-700 opacity-10"/>
         
         <g transform="translate(100, 100)">
-          <line x1="-60" y1="0" x2="60" y2="0" stroke="#086788" strokeWidth="2"/>
+          <line x1="-60" y1="0" x2="60" y2="0" className="stroke-blue-700" strokeWidth="2"/>
           
-          <circle cx="-60" cy="0" r="8" fill="#A34242" opacity="0.9"/>
-          <circle cx="-30" cy="0" r="8" fill="#A34242" opacity="0.6"/>
-          <circle cx="0" cy="0" r="12" fill="#086788"/>
-          <circle cx="30" cy="0" r="8" fill="#7fb685" opacity="0.7"/>
-          <circle cx="60" cy="0" r="8" fill="#7fb685"/>
+          <circle cx="-60" cy="0" r="8" className="fill-red-600 opacity-90"/>
+          <circle cx="-30" cy="0" r="8" className="fill-red-600 opacity-60"/>
+          <circle cx="0" cy="0" r="12" className="fill-blue-700"/>
+          <circle cx="30" cy="0" r="8" className="fill-green-600 opacity-70"/>
+          <circle cx="60" cy="0" r="8" className="fill-green-600"/>
           
-          <text x="0" y="-35" fontFamily="Arial, sans-serif" fontSize="32" fontWeight="bold" textAnchor="middle" fill="#086788">?</text>
+          <text x="0" y="-35" fontFamily="Arial, sans-serif" fontSize="32" fontWeight="bold" textAnchor="middle" className="fill-blue-700">?</text>
           
-          <path d="M -15 25 L -5 35 L 15 15" stroke="#7fb685" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M -15 25 L -5 35 L 15 15" className="stroke-green-600" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
         </g>
       </svg>
       
       {showText && (
-        <span className="font-semibold text-gunmetal" style={{ fontSize: `${fontSize}px` }}>
+        <span className="font-semibold text-gray-700" style={{ fontSize: `${fontSize}px` }}>
           Likert Or Not
         </span>
       )}

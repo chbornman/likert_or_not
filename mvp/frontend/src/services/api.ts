@@ -51,7 +51,15 @@ export type QuestionType =
   | 'select'
   | 'multiselect'
   | 'number'
-  | 'section_header';
+  | 'section_header'
+  | 'multiple_choice'
+  | 'checkbox'
+  | 'dropdown'
+  | 'yes_no'
+  | 'rating'
+  | 'date'
+  | 'time'
+  | 'datetime';
 
 export interface QuestionFeatures {
   required?: boolean;
@@ -70,6 +78,11 @@ export interface QuestionFeatures {
     minLabel?: string;
     maxLabel?: string;
   };
+  min?: number | string; // For number, rating, date/time types
+  max?: number | string; // For number, rating, date/time types
+  step?: number; // For number type
+  ratingStyle?: 'stars' | 'numbers'; // For rating type
+  dateFormat?: string; // For date/time types
 }
 
 export interface FormWithSections {

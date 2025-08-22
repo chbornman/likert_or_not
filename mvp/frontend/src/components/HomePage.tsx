@@ -51,7 +51,7 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 flex items-center justify-center">
-        <div className="text-lg text-gunmetal">Loading available forms...</div>
+        <div className="text-lg text-gray-800">Loading available forms...</div>
       </div>
     );
   }
@@ -67,7 +67,7 @@ export default function HomePage() {
             <p>{error}</p>
             <Button 
               onClick={() => window.location.reload()} 
-              className="mt-4 bg-gunmetal hover:bg-gunmetal/90"
+              className="mt-4 bg-gray-800 hover:bg-gray-700"
             >
               Try Again
             </Button>
@@ -82,7 +82,7 @@ export default function HomePage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gunmetal mb-4">
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">
             Available Forms
           </h1>
           <p className="text-lg text-gray-600">
@@ -158,7 +158,7 @@ export default function HomePage() {
           <Button
             variant="ghost"
             onClick={() => navigate('/admin')}
-            className="text-gray-500 hover:text-gunmetal"
+            className="text-gray-500 hover:text-gray-800"
           >
             Admin Access →
           </Button>

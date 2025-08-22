@@ -30,7 +30,7 @@ cp .env.example .env
 
 3. Start development environment:
 ```bash
-docker-compose -f docker-compose.dev.yml up
+docker compose -f docker-compose.dev.yml up
 ```
 
 4. Access the application:

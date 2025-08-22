@@ -1,13 +1,19 @@
 export interface Question {
   id: number;
   question_text: string;
-  question_type?: 'likert' | 'text' | 'textarea';
+  question_type?: 'likert' | 'text' | 'textarea' | 'multiple_choice' | 'checkbox' | 'dropdown' | 'yes_no' | 'rating' | 'number' | 'date' | 'time' | 'datetime';
   is_required: boolean;
   allow_comment: boolean;
   position: number;
   placeholder?: string;
   rows?: number;
   charLimit?: number;
+  options?: string[]; // For multiple choice, checkbox, dropdown
+  min?: number; // For number and rating types
+  max?: number; // For number and rating types
+  step?: number; // For number type
+  ratingStyle?: 'stars' | 'numbers'; // For rating type
+  dateFormat?: string; // For date/time types
 }
 
 export interface FormData {
@@ -23,6 +29,10 @@ export interface AnswerInput {
   likert_value?: number | null;
   comment: string;
   text_value?: string;
+  selected_options?: string[]; // For checkbox (multi-select)
+  selected_option?: string; // For multiple choice, dropdown, yes/no
+  number_value?: number; // For number and rating types
+  date_value?: string; // For date/time types
 }
 
 export interface SubmissionRequest {

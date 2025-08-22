@@ -10,7 +10,7 @@ export default function SuccessPage() {
       <Card className="max-w-md w-full shadow-2xl border-0 bg-white/95 backdrop-blur overflow-hidden">
         <CardHeader className="bg-gradient-to-r from-cambridge-blue to-cerulean text-white">
           <CardTitle className="text-3xl text-center font-bold">Thank You!</CardTitle>
-          <CardDescription className="text-center text-cream/90 text-base mt-2">
+          <CardDescription className="text-center text-stone-100/90 text-base mt-2">
             Your response has been successfully submitted.
           </CardDescription>
         </CardHeader>
@@ -20,7 +20,7 @@ export default function SuccessPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <p className="text-gunmetal/80 text-lg">
+          <p className="text-gray-800/80 text-lg">
             We appreciate your feedback and will review your responses carefully.
           </p>
           <Button 

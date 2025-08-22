@@ -51,12 +51,12 @@ export default function TextAreaInput({
             <div className="w-full bg-gray-200 rounded-full h-1 mr-3">
               <div
                 className={`h-1 rounded-full transition-all ${
-                  isNearLimit ? 'bg-yellow-500' : 'bg-blue-500'
+                  isNearLimit ? 'bg-stone-400' : 'bg-blue-500'
                 }`}
                 style={{ width: `${Math.min(charPercentage, 100)}%` }}
               />
             </div>
-            <span className={`text-xs ${isNearLimit ? 'text-yellow-600' : 'text-gray-500'}`}>
+            <span className={`text-xs ${isNearLimit ? 'text-stone-600' : 'text-gray-500'}`}>
               {charCount}/{charLimit}
             </span>
           </div>
