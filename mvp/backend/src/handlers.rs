@@ -1010,7 +1010,7 @@ pub async fn update_form_status(
     })))
 }
 
-/// Delete a form (admin only)
+/// Delete a form (admin only) - deletes form and all associated data including responses
 pub async fn delete_form(
     Path(form_id): Path<String>,
     Query(auth): Query<AuthQuery>,
@@ -1021,39 +1021,66 @@ pub async fn delete_form(
         return Err(AppError::Unauthorized("Invalid admin token".to_string()));
     }
 
-    // Check if form has responses
-    let response_count: (i64,) = sqlx::query_as(
+    // Start a transaction to ensure all deletions happen atomically
+    let mut tx = state.db.begin().await.map_err(|e| AppError::Database(e))?;
+
+    // Check if form exists and get response count for logging
+    let response_count: Option<(i64,)> = sqlx::query_as(
         "SELECT COUNT(*) FROM responses WHERE form_id = ?"
     )
     .bind(&form_id)
-    .fetch_one(&state.db)
+    .fetch_optional(&mut *tx)
     .await
     .map_err(|e| AppError::Database(e))?;
 
-    if response_count.0 > 0 {
-        return Err(AppError::BadRequest("Cannot delete form with existing responses".to_string()));
-    }
+    let count = response_count.map(|c| c.0).unwrap_or(0);
 
-    // Delete form (cascade will handle sections and questions)
+    // Delete all answers associated with responses to this form
+    sqlx::query(
+        "DELETE FROM answers WHERE response_id IN (SELECT id FROM responses WHERE form_id = ?)"
+    )
+    .bind(&form_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| AppError::Database(e))?;
+
+    // Delete all responses for this form
+    sqlx::query("DELETE FROM responses WHERE form_id = ?")
+        .bind(&form_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError::Database(e))?;
+
+    // Delete all questions for this form
     sqlx::query("DELETE FROM questions WHERE form_id = ?")
         .bind(&form_id)
-        .execute(&state.db)
+        .execute(&mut *tx)
         .await
         .map_err(|e| AppError::Database(e))?;
 
+    // Delete all sections for this form
     sqlx::query("DELETE FROM sections WHERE form_id = ?")
         .bind(&form_id)
-        .execute(&state.db)
+        .execute(&mut *tx)
         .await
         .map_err(|e| AppError::Database(e))?;
 
-    sqlx::query("DELETE FROM forms WHERE id = ?")
+    // Finally, delete the form itself
+    let result = sqlx::query("DELETE FROM forms WHERE id = ?")
         .bind(&form_id)
-        .execute(&state.db)
+        .execute(&mut *tx)
         .await
         .map_err(|e| AppError::Database(e))?;
+
+    if result.rows_affected() == 0 {
+        return Err(AppError::BadRequest("Form not found".to_string()));
+    }
+
+    // Commit the transaction
+    tx.commit().await.map_err(|e| AppError::Database(e))?;
 
     Ok(Json(json!({
-        "message": "Form deleted successfully"
+        "message": format!("Form deleted successfully along with {} responses", count),
+        "responses_deleted": count
     })))
 }

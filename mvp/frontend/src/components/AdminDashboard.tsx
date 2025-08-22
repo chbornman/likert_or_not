@@ -54,7 +54,7 @@ export default function AdminDashboard() {
   const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  const [selectedForm, setSelectedForm] = useState<{ id: string; title: string } | null>(null);
+  const [selectedForm, setSelectedForm] = useState<{ id: string; title: string; responseCount?: number } | null>(null);
   const [pendingStatusChange, setPendingStatusChange] = useState<{ formId: string; newStatus: string } | null>(null);
 
   useEffect(() => {
@@ -237,8 +237,8 @@ export default function AdminDashboard() {
     return statusMessages[pendingStatusChange.newStatus as keyof typeof statusMessages] || '';
   };
 
-  const handleDeleteClick = (formId: string, formTitle: string) => {
-    setSelectedForm({ id: formId, title: formTitle });
+  const handleDeleteClick = (formId: string, formTitle: string, responseCount?: number) => {
+    setSelectedForm({ id: formId, title: formTitle, responseCount });
     setDeleteDialogOpen(true);
   };
 
@@ -1041,13 +1041,9 @@ export default function AdminDashboard() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className={
-                        selectedForm && (selectedForm.status === 'draft' || selectedForm.status === 'archived') && selectedResponseCount === 0
-                          ? 'text-red-600 hover:text-red-700'
-                          : 'text-gray-400 cursor-not-allowed'
-                      }
-                      onClick={() => selectedForm && handleDeleteClick(selectedForm.id, selectedForm.title)}
-                      disabled={!selectedForm || !(selectedForm?.status === 'draft' || selectedForm?.status === 'archived') || selectedResponseCount > 0}
+                      className="text-red-600 hover:text-red-700"
+                      onClick={() => selectedForm && handleDeleteClick(selectedForm.id, selectedForm.title, selectedResponseCount)}
+                      disabled={!selectedForm}
                       title="Delete Form"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1172,8 +1168,31 @@ export default function AdminDashboard() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Form</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{selectedForm?.title}"? This will permanently delete the form and all its questions. This action cannot be undone.
+            <AlertDialogDescription asChild>
+              <div>
+                {selectedForm?.responseCount && selectedForm.responseCount > 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-red-600 font-semibold">
+                      ⚠️ Warning: This form has {selectedForm.responseCount} response{selectedForm.responseCount > 1 ? 's' : ''}.
+                    </p>
+                    <p>
+                      Are you sure you want to delete "{selectedForm?.title}"? This will permanently delete:
+                    </p>
+                    <ul className="list-disc list-inside ml-2 space-y-1">
+                      <li>The form and all its questions</li>
+                      <li>All {selectedForm.responseCount} submitted response{selectedForm.responseCount > 1 ? 's' : ''}</li>
+                      <li>All associated data</li>
+                    </ul>
+                    <p className="font-semibold text-red-600">
+                      This action cannot be undone!
+                    </p>
+                  </div>
+                ) : (
+                  <p>
+                    Are you sure you want to delete "{selectedForm?.title}"? This will permanently delete the form and all its questions. This action cannot be undone.
+                  </p>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1182,7 +1201,10 @@ export default function AdminDashboard() {
               onClick={deleteForm}
               className="bg-red-600 hover:bg-red-700"
             >
-              Delete
+              {selectedForm?.responseCount && selectedForm.responseCount > 0 
+                ? `Delete Form and ${selectedForm.responseCount} Response${selectedForm.responseCount > 1 ? 's' : ''}`
+                : 'Delete Form'
+              }
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
