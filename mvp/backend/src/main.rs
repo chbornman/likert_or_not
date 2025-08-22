@@ -87,6 +87,7 @@ fn build_full_app(app_state: AppState) -> Router {
         .route("/api/forms/{form_id}", get(handlers::get_form))
         .route("/api/forms/{form_id}/submit", post(handlers::submit_form_with_privacy))
         .route("/api/forms/{form_id}/stats", get(handlers::get_form_stats_anonymous))
+        .route("/api/template", get(handlers::get_form_template))
         // Admin routes (requires auth)
         .route("/api/admin/stats", get(handlers::get_admin_stats))
         .route("/api/admin/responses", get(handlers::get_admin_responses))

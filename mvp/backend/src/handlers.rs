@@ -1084,3 +1084,18 @@ pub async fn delete_form(
         "responses_deleted": count
     })))
 }
+
+/// Serve the form template JSON file
+pub async fn get_form_template() -> Result<impl IntoResponse, AppError> {
+    let template_path = std::env::var("TEMPLATE_PATH")
+        .unwrap_or_else(|_| "/app/config/form-template.json".to_string());
+    
+    let template_content = tokio::fs::read_to_string(&template_path)
+        .await
+        .map_err(|e| AppError::InternalError(format!("Failed to read template file: {}", e)))?;
+    
+    let template_json: JsonValue = serde_json::from_str(&template_content)
+        .map_err(|e| AppError::InternalError(format!("Invalid template JSON: {}", e)))?;
+    
+    Ok(Json(template_json))
+}

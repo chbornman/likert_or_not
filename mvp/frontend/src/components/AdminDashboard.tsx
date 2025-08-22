@@ -529,157 +529,44 @@ export default function AdminDashboard() {
     );
   }
 
-  const downloadTemplate = () => {
-    const template = {
-      id: "unique-form-id",
-      title: "Example Form Title",
-      description: "Brief description of the form",
-      welcome_message: "Welcome message shown at the start",
-      closing_message: "Thank you message shown after submission",
-      status: "draft",
-      settings: {
-        allowAnonymous: true,
-        requireEmail: false,
-        estimatedTime: "10-15 minutes",
-        confidentialityNotice: "Optional confidentiality notice",
-        reviewPeriod: "Optional review period (e.g., Q1 2025)"
-      },
-      sections: [
-        {
-          id: "section-1",
-          title: "Rating Questions",
-          description: "Examples of rating-based questions",
-          position: 1,
-          questions: [
-            {
-              id: "q1",
-              title: "How satisfied are you with our service?",
-              question_type: "likert",
-              is_required: true,
-              help_text: "Please rate your satisfaction level",
-              position: 1
-            },
-            {
-              id: "q2",
-              title: "Rate the quality of our product",
-              question_type: "rating",
-              is_required: true,
-              help_text: "1 star = Poor, 5 stars = Excellent",
-              position: 2
-            }
-          ]
-        },
-        {
-          id: "section-2",
-          title: "Text Input Questions",
-          description: "Examples of text-based questions",
-          position: 2,
-          questions: [
-            {
-              id: "q3",
-              title: "What is your name?",
-              question_type: "text",
-              is_required: false,
-              help_text: "Optional",
-              position: 3,
-              placeholder: "Enter your name",
-              charLimit: 100
-            },
-            {
-              id: "q4",
-              title: "Please provide detailed feedback",
-              question_type: "textarea",
-              is_required: false,
-              help_text: "Share your thoughts in detail",
-              position: 4,
-              placeholder: "Type your feedback here...",
-              rows: 5,
-              charLimit: 500
-            }
-          ]
-        },
-        {
-          id: "section-3",
-          title: "Selection Questions",
-          description: "Examples of choice-based questions",
-          position: 3,
-          questions: [
-            {
-              id: "q5",
-              title: "Select your department",
-              question_type: "dropdown",
-              is_required: true,
-              help_text: "",
-              position: 5,
-              options: ["Engineering", "Sales", "Marketing", "HR", "Other"]
-            },
-            {
-              id: "q6",
-              title: "Which features do you use? (select all that apply)",
-              question_type: "checkbox",
-              is_required: false,
-              help_text: "You can select multiple options",
-              position: 6,
-              options: ["Feature A", "Feature B", "Feature C", "Feature D"]
-            },
-            {
-              id: "q7",
-              title: "What is your preferred contact method?",
-              question_type: "multiple_choice",
-              is_required: true,
-              help_text: "",
-              position: 7,
-              options: ["Email", "Phone", "Text Message", "Mail"]
-            },
-            {
-              id: "q8",
-              title: "Would you recommend us to others?",
-              question_type: "yes_no",
-              is_required: true,
-              help_text: "",
-              position: 8
-            }
-          ]
-        },
-        {
-          id: "section-4",
-          title: "Numeric and Date Questions",
-          description: "Examples of number and date inputs",
-          position: 4,
-          questions: [
-            {
-              id: "q9",
-              title: "How many years of experience do you have?",
-              question_type: "number",
-              is_required: false,
-              help_text: "",
-              position: 9,
-              min: 0,
-              max: 50
-            },
-            {
-              id: "q10",
-              title: "When would you like to schedule a follow-up?",
-              question_type: "datetime",
-              is_required: false,
-              help_text: "Select a date and time",
-              position: 10
-            }
-          ]
-        }
-      ]
-    };
-
-    // Create and download the JSON file
-    const dataStr = JSON.stringify(template, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
-    const exportFileDefaultName = 'form-template.json';
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
+  const downloadTemplate = async () => {
+    try {
+      // Fetch the template from the backend
+      const response = await fetch('/api/template');
+      if (!response.ok) {
+        throw new Error('Failed to fetch template');
+      }
+      
+      const template = await response.json();
+      
+      // Create and download the JSON file
+      const dataStr = JSON.stringify(template, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      
+      const exportFileDefaultName = 'form-template.json';
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.style.display = 'none';
+      document.body.appendChild(linkElement);
+      
+      linkElement.click();
+      
+      document.body.removeChild(linkElement);
+      
+      toast({
+        title: "Template Downloaded",
+        description: "The comprehensive form template has been downloaded.",
+      });
+    } catch (error) {
+      console.error('Error downloading template:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download the template. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
