@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileSpreadsheet, Upload } from 'lucide-react';
+import { FileSpreadsheet, Upload, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface Form {
@@ -63,8 +63,8 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async (authToken: string) => {
     try {
-      // First, get all forms using the v2 API
-      const formsRes = await fetch('/api/v2/forms');
+      // First, get all forms
+      const formsRes = await fetch('/api/forms');
       if (!formsRes.ok) {
         throw new Error('Failed to load forms');
       }
@@ -130,7 +130,7 @@ export default function AdminDashboard() {
   const exportFormToExcel = async (formId: string, formTitle: string) => {
     try {
       // Fetch full form data
-      const formRes = await fetch(`/api/v2/forms/${formId}`);
+      const formRes = await fetch(`/api/forms/${formId}`);
       if (!formRes.ok) throw new Error('Failed to load form');
       const formData = await formRes.json();
       
@@ -311,6 +311,94 @@ export default function AdminDashboard() {
     );
   }
 
+  const downloadTemplate = () => {
+    const template = {
+      id: "unique-form-id",
+      title: "Form Title",
+      description: "Brief description of the form",
+      welcome_message: "Welcome message shown at the start",
+      closing_message: "Thank you message shown after submission",
+      status: "published",
+      settings: {
+        allowAnonymous: true,
+        requireEmail: true,
+        estimatedTime: "15-20 minutes",
+        confidentialityNotice: "Optional confidentiality notice",
+        reviewPeriod: "Optional review period (e.g., Q1 2025)"
+      },
+      sections: [
+        {
+          id: "section-1",
+          title: "Section 1 Title",
+          description: "Section 1 description",
+          position: 1,
+          questions: [
+            {
+              id: "q1",
+              title: "Example Likert scale question?",
+              question_type: "likert",
+              is_required: true,
+              allow_comment: true,
+              help_text: "Optional help text for the question",
+              position: 1
+            },
+            {
+              id: "q2",
+              title: "Example text input question?",
+              question_type: "text",
+              is_required: false,
+              allow_comment: false,
+              help_text: "Optional help text",
+              position: 2,
+              placeholder: "Optional placeholder text",
+              charLimit: 200
+            },
+            {
+              id: "q3",
+              title: "Example long text question?",
+              question_type: "textarea",
+              is_required: false,
+              allow_comment: false,
+              help_text: "Optional help text",
+              position: 3,
+              placeholder: "Optional placeholder for textarea",
+              rows: 5,
+              charLimit: 1000
+            }
+          ]
+        },
+        {
+          id: "section-2",
+          title: "Section 2 Title",
+          description: "Section 2 description",
+          position: 2,
+          questions: [
+            {
+              id: "q4",
+              title: "Another Likert question?",
+              question_type: "likert",
+              is_required: true,
+              allow_comment: false,
+              help_text: "",
+              position: 4
+            }
+          ]
+        }
+      ]
+    };
+
+    // Create and download the JSON file
+    const dataStr = JSON.stringify(template, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = 'form-template.json';
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -342,11 +430,11 @@ export default function AdminDashboard() {
       }
 
       setUploadSuccess(`Form "${config.title}" imported successfully!`);
-      // Refresh the forms list
-      setTimeout(() => {
-        fetchDashboardData(token!);
+      // Refresh the forms list after a short delay to ensure DB is updated
+      setTimeout(async () => {
+        await fetchDashboardData(token!);
         setUploadSuccess('');
-      }, 2000);
+      }, 1500);
     } catch (error) {
       console.error('Import error:', error);
       setUploadError(error instanceof Error ? error.message : 'Failed to import form configuration');
@@ -372,6 +460,14 @@ export default function AdminDashboard() {
               className="hidden"
               id="form-upload"
             />
+            <Button
+              onClick={downloadTemplate}
+              variant="outline"
+              className="border-cambridge-blue text-cambridge-blue hover:bg-cambridge-blue hover:text-white"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download Template
+            </Button>
             <Button
               onClick={() => fileInputRef.current?.click()}
               className="bg-green-600 hover:bg-green-700 text-white"
@@ -406,14 +502,27 @@ export default function AdminDashboard() {
             <CardContent className="text-center py-12">
               <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
               <p className="text-gray-600 text-lg font-medium mb-2">No forms available yet</p>
-              <p className="text-gray-500 mb-6">Get started by importing your first form configuration</p>
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Import Your First Form
-              </Button>
+              <p className="text-gray-500 mb-6">Get started by downloading a template or importing a form configuration</p>
+              <div className="flex gap-3 justify-center">
+                <Button
+                  onClick={downloadTemplate}
+                  variant="outline"
+                  className="border-cambridge-blue text-cambridge-blue hover:bg-cambridge-blue hover:text-white"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download Template
+                </Button>
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import Form
+                </Button>
+              </div>
+              <p className="text-gray-400 text-sm mt-4">
+                Download the template, customize it with your questions, then import it back
+              </p>
             </CardContent>
           </Card>
         ) : (

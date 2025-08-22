@@ -1,84 +1,78 @@
 {
   "$schema": "../form-schema.json",
-  "id": "ed-performance-review",
-  "title": "Executive Director Performance Review",
-  "description": "Annual performance evaluation for the Executive Director",
+  "id": "tcw-ed-performance-review",
+  "title": "TCW Executive Director Performance Review",
+  "description": "Performance review for the Executive Director covering January - June 2025",
   "status": "published",
-  "welcome_message": "Thank you for participating in the Executive Director's performance review. Your honest feedback is valuable for organizational growth and leadership development.",
-  "closing_message": "Thank you for completing the Executive Director Performance Review. Your feedback has been submitted successfully.",
+  "welcome_message": "This review covers the performance period from January - June 2025. Results and comments will be viewed in aggregate by role (staff / board / ED).\n\nFor reference, the Executive Director job description summary:\n\nThe Executive Director will be responsible for strategic planning, operational management, community outreach, and volunteer coordination and will work closely with the Board of Directors to ensure the financial health and sustainability of the organization while enhancing its programs and services. This role requires a hands-on leader who is both a strategic thinker and a practical manager, capable of inspiring staff, volunteers, and community partners.",
+  "closing_message": "Thank you for completing this performance review. Your feedback is valuable in supporting the Executive Director's continued growth and success.",
   "sections": [
     {
       "id": "organizational-leadership",
       "title": "Organizational Leadership",
-      "description": "Evaluate the ED's effectiveness in leading the organization",
+      "description": "Assessment of strategic leadership and goal achievement",
       "position": 1,
       "questions": [
         {
-          "id": "strategic-goals",
-          "title": "The Executive Director effectively leads the organization toward achieving its strategic goals",
-          "question_type": "likert",
+          "id": "top-objectives",
+          "title": "What were the Executive Director's top 3-5 objectives for the organization?",
+          "question_type": "textarea",
           "is_required": true,
-          "position": 1
+          "position": 1,
+          "help_text": "Please list the key objectives you observed or were communicated"
         },
         {
-          "id": "board-objectives",
-          "title": "The ED demonstrates clear understanding of the Board's strategic objectives",
+          "id": "leads-toward-goals",
+          "title": "The Executive Director effectively leads the organization toward achieving its strategic goals",
           "question_type": "likert",
           "is_required": true,
           "position": 2
         },
         {
-          "id": "actionable-results",
-          "title": "The ED successfully translates strategic direction into actionable results",
+          "id": "understands-board-objectives",
+          "title": "The ED demonstrates clear understanding of the Board's objectives",
           "question_type": "likert",
           "is_required": true,
           "position": 3
         },
         {
-          "id": "organizational-priorities",
-          "title": "The ED maintains focus on organizational priorities throughout the review period",
+          "id": "translates-strategy",
+          "title": "The ED successfully translates strategic direction into actionable results",
           "question_type": "likert",
           "is_required": true,
           "position": 4
-        },
-        {
-          "id": "leadership-comments",
-          "title": "Additional comments on organizational leadership",
-          "question_type": "textarea",
-          "is_required": false,
-          "position": 5
         }
       ]
     },
     {
-      "id": "strategic-planning",
-      "title": "Strategic Planning & Management",
-      "description": "Assess strategic thinking and operational management",
+      "id": "planning-management",
+      "title": "Planning & Management",
+      "description": "Evaluation of planning and management capabilities",
       "position": 2,
       "questions": [
         {
-          "id": "strategic-thinking",
-          "title": "The ED demonstrates effective strategic thinking and planning",
+          "id": "effective-planning",
+          "title": "The ED demonstrates effective long-term and short-term planning",
           "question_type": "likert",
           "is_required": true,
           "position": 1
         },
         {
-          "id": "operations-management",
+          "id": "manages-operations",
           "title": "The ED manages operations efficiently and effectively",
           "question_type": "likert",
           "is_required": true,
           "position": 2
         },
         {
-          "id": "vision-balance",
+          "id": "balances-vision-management",
           "title": "The ED balances strategic vision with practical management needs",
           "question_type": "likert",
           "is_required": true,
           "position": 3
         },
         {
-          "id": "inspire-stakeholders",
+          "id": "inspires-stakeholders",
           "title": "The ED inspires staff, volunteers, and community partners",
           "question_type": "likert",
           "is_required": true,
@@ -87,9 +81,9 @@
       ]
     },
     {
-      "id": "governance",
+      "id": "leadership-governance",
       "title": "Leadership & Governance",
-      "description": "Evaluate board relations and governance practices",
+      "description": "Assessment of leadership and governance practices",
       "position": 3,
       "questions": [
         {
@@ -101,7 +95,7 @@
         },
         {
           "id": "board-collaboration",
-          "title": "The ED works collaboratively with the Board of Directors",
+          "title": "The ED works and communicates collaboratively with the Board of Directors",
           "question_type": "likert",
           "is_required": true,
           "position": 2
@@ -112,46 +106,39 @@
           "question_type": "likert",
           "is_required": true,
           "position": 3
-        },
-        {
-          "id": "board-communication",
-          "title": "The ED communicates effectively with board members",
-          "question_type": "likert",
-          "is_required": true,
-          "position": 4
         }
       ]
     },
     {
-      "id": "programs-operations",
+      "id": "programming-operations",
       "title": "Programming & Operations",
-      "description": "Review program management and operational efficiency",
+      "description": "Evaluation of program management and operational effectiveness",
       "position": 4,
       "questions": [
         {
-          "id": "mission-alignment",
+          "id": "programs-align-mission",
           "title": "The ED oversees programs that align with organizational mission",
           "question_type": "likert",
           "is_required": true,
           "position": 1
         },
         {
-          "id": "operational-efficiency",
-          "title": "The ED ensures operational efficiency across all departments",
+          "id": "enhances-programs",
+          "title": "The ED enhances and improves existing programs and services",
           "question_type": "likert",
           "is_required": true,
           "position": 2
         },
         {
-          "id": "program-improvement",
-          "title": "The ED enhances and improves existing programs and services",
+          "id": "manages-daily-operations",
+          "title": "The ED manages day-to-day operations effectively",
           "question_type": "likert",
           "is_required": true,
           "position": 3
         },
         {
-          "id": "daily-operations",
-          "title": "The ED manages day-to-day operations effectively",
+          "id": "staff-collaboration",
+          "title": "The ED works and communicates collaboratively with the Staff",
           "question_type": "likert",
           "is_required": true,
           "position": 4
@@ -159,35 +146,35 @@
       ]
     },
     {
-      "id": "financial-management",
+      "id": "fundraising-financial",
       "title": "Fundraising & Financial Management",
-      "description": "Assess financial stewardship and fundraising effectiveness",
+      "description": "Assessment of fundraising and financial stewardship",
       "position": 5,
       "questions": [
         {
           "id": "financial-health",
-          "title": "The ED ensures the financial health of the organization",
+          "title": "The ED ensures the financial health / sustainability of the organization",
           "question_type": "likert",
           "is_required": true,
           "position": 1
         },
         {
-          "id": "fundraising-leadership",
-          "title": "The ED successfully leads fundraising initiatives",
+          "id": "fundraising-model",
+          "title": "The ED develops and implements a sustainable fundraising model",
           "question_type": "likert",
           "is_required": true,
           "position": 2
         },
         {
-          "id": "financial-practices",
-          "title": "The ED demonstrates sound financial management practices",
+          "id": "leads-fundraising",
+          "title": "The ED successfully leads fundraising initiatives",
           "question_type": "likert",
           "is_required": true,
           "position": 3
         },
         {
-          "id": "sustainability",
-          "title": "The ED works to ensure organizational sustainability",
+          "id": "financial-management",
+          "title": "The ED demonstrates sound financial management practices",
           "question_type": "likert",
           "is_required": true,
           "position": 4
@@ -197,18 +184,18 @@
     {
       "id": "community-engagement",
       "title": "Community Engagement & Advocacy",
-      "description": "Evaluate external relations and community presence",
+      "description": "Evaluation of external relations and advocacy",
       "position": 6,
       "questions": [
         {
-          "id": "community-representation",
+          "id": "represents-organization",
           "title": "The ED effectively represents the organization in the community",
           "question_type": "likert",
           "is_required": true,
           "position": 1
         },
         {
-          "id": "partner-relationships",
+          "id": "community-relationships",
           "title": "The ED builds strong relationships with community partners",
           "question_type": "likert",
           "is_required": true,
@@ -233,7 +220,7 @@
     {
       "id": "core-values",
       "title": "Core Values",
-      "description": "Assess alignment with organizational values",
+      "description": "Assessment of alignment with organizational values",
       "position": 7,
       "questions": [
         {
@@ -273,7 +260,7 @@
         },
         {
           "id": "mission-commitment",
-          "title": "The ED shows deep understanding and commitment to the organization's mission",
+          "title": "The ED shows deep understanding and commitment to TCW's mission",
           "question_type": "likert",
           "is_required": true,
           "position": 6
@@ -283,94 +270,120 @@
     {
       "id": "executive-competencies",
       "title": "Executive Competencies",
-      "description": "Evaluate key executive leadership skills",
+      "description": "Evaluation of key executive leadership competencies",
       "position": 8,
       "questions": [
         {
-          "id": "vision-setting",
-          "title": "The ED sets a clear and compelling vision for the organization's work",
+          "id": "sets-vision",
+          "title": "The ED sets a clear and compelling vision for TCW's work",
           "question_type": "likert",
           "is_required": true,
           "position": 1
         },
         {
-          "id": "execution-management",
+          "id": "manages-execution",
           "title": "The ED manages execution of plans and initiatives effectively",
           "question_type": "likert",
           "is_required": true,
           "position": 2
         },
         {
-          "id": "organization-building",
-          "title": "The ED builds a strong and capable organization",
+          "id": "external-communication",
+          "title": "The ED excels at external communication and relationship-building",
           "question_type": "likert",
           "is_required": true,
           "position": 3
         },
         {
-          "id": "external-communication",
-          "title": "The ED excels at external communication and relationship-building",
-          "question_type": "likert",
-          "is_required": true,
-          "position": 4
-        },
-        {
-          "id": "behavior-modeling",
+          "id": "models-behaviors",
           "title": "The ED models the behaviors expected of all employees",
           "question_type": "likert",
           "is_required": true,
-          "position": 5
+          "position": 4
         }
       ]
     },
     {
       "id": "overall-performance",
       "title": "Overall Performance",
-      "description": "Provide an overall assessment",
+      "description": "Overall assessment of the Executive Director's performance",
       "position": 9,
       "questions": [
-        {
-          "id": "exceeds-expectations",
-          "title": "The ED regularly exceeds performance expectations",
-          "question_type": "likert",
-          "is_required": true,
-          "position": 1
-        },
         {
           "id": "positive-impact",
           "title": "The ED's leadership positively impacts organizational success",
           "question_type": "likert",
           "is_required": true,
+          "position": 1
+        },
+        {
+          "id": "addresses-improvements",
+          "title": "The ED effectively addresses areas needing improvement",
+          "question_type": "likert",
+          "is_required": true,
           "position": 2
         },
         {
-          "id": "improvement-areas",
-          "title": "The ED effectively addresses areas needing improvement",
+          "id": "achieves-results",
+          "title": "The ED achieves measurable results in key responsibility areas",
           "question_type": "likert",
           "is_required": true,
           "position": 3
         },
         {
-          "id": "measurable-results",
-          "title": "The ED achieves measurable results in key responsibility areas",
-          "question_type": "likert",
-          "is_required": true,
-          "position": 4
-        },
-        {
-          "id": "leadership-confidence",
+          "id": "confidence-in-leadership",
           "title": "I am confident in the ED's ability to lead the organization forward",
           "question_type": "likert",
           "is_required": true,
-          "position": 5
-        },
+          "position": 4
+        }
+      ]
+    },
+    {
+      "id": "open-ended-feedback",
+      "title": "Open-Ended Follow-Up Questions",
+      "description": "Please provide detailed feedback to help support the ED's continued growth",
+      "position": 10,
+      "questions": [
         {
-          "id": "overall-comments",
-          "title": "Please provide any additional feedback or suggestions for the Executive Director",
+          "id": "accomplishments",
+          "title": "What specific accomplishments best exemplify the ED's performance?",
           "question_type": "textarea",
           "is_required": false,
-          "position": 6,
-          "help_text": "Your detailed feedback is valuable for continuous improvement"
+          "position": 1,
+          "help_text": "Please provide specific examples"
+        },
+        {
+          "id": "growth-opportunities",
+          "title": "What areas present the greatest opportunities for the ED's growth?",
+          "question_type": "textarea",
+          "is_required": false,
+          "position": 2,
+          "help_text": "Please be specific and constructive"
+        },
+        {
+          "id": "support-needed",
+          "title": "What support does the ED need to be more successful?",
+          "question_type": "textarea",
+          "is_required": false,
+          "position": 3,
+          "help_text": "Consider resources, training, or structural support"
+        },
+        {
+          "id": "priority-goals",
+          "title": "What specific goals should be prioritized for the next review period?",
+          "question_type": "textarea",
+          "is_required": false,
+          "position": 4,
+          "help_text": "Please suggest 2-3 key priorities"
+        },
+        {
+          "id": "other-thoughts",
+          "title": "Any other thoughts:",
+          "question_type": "textarea",
+          "is_required": false,
+          "position": 5,
+          "help_text": "Please share any additional feedback or observations"
         }
       ]
     }

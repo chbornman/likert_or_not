@@ -1,5 +1,5 @@
-mod models_v3;
-mod handlers_v3;
+mod models;
+mod handlers;
 mod db;
 mod email;
 mod error;
@@ -83,13 +83,16 @@ fn build_full_app(app_state: AppState) -> Router {
     // Build all routes including v2
     Router::new()
         // Public routes
-        .route("/api/forms", get(handlers_v3::list_forms))
-        .route("/api/forms/{form_id}", get(handlers_v3::get_form))
-        .route("/api/forms/{form_id}/submit", post(handlers_v3::submit_form_with_privacy))
-        .route("/api/forms/{form_id}/stats", get(handlers_v3::get_form_stats_anonymous))
+        .route("/api/forms", get(handlers::list_forms))
+        .route("/api/forms/{form_id}", get(handlers::get_form))
+        .route("/api/forms/{form_id}/submit", post(handlers::submit_form_with_privacy))
+        .route("/api/forms/{form_id}/stats", get(handlers::get_form_stats_anonymous))
         // Admin routes (requires auth)
-        .route("/api/admin/forms/{form_id}/responses", get(handlers_v3::get_responses_with_pii))
-        .route("/api/admin/respondents/{respondent_id}", delete(handlers_v3::delete_respondent_pii))
+        .route("/api/admin/stats", get(handlers::get_admin_stats))
+        .route("/api/admin/responses", get(handlers::get_admin_responses))
+        .route("/api/admin/import-form", post(handlers::import_form))
+        .route("/api/admin/forms/{form_id}/responses", get(handlers::get_responses_with_pii))
+        .route("/api/admin/respondents/{respondent_id}", delete(handlers::delete_respondent_pii))
         .fallback_service(serve_dir)
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())

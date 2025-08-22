@@ -173,15 +173,15 @@ class ApiClient {
 
   // Form methods
   async listForms(): Promise<Form[]> {
-    return this.request<Form[]>('/api/v2/forms');
+    return this.request<Form[]>('/api/forms');
   }
 
   async getForm(formId: string): Promise<FormWithSections> {
-    return this.request<FormWithSections>(`/api/v2/forms/${formId}`);
+    return this.request<FormWithSections>(`/api/forms/${formId}`);
   }
 
   async submitForm(formId: string, response: FormResponse): Promise<{ id: string }> {
-    return this.request<{ id: string }>(`/api/v2/forms/${formId}/submit`, {
+    return this.request<{ id: string }>(`/api/forms/${formId}/submit`, {
       method: 'POST',
       body: JSON.stringify(response),
     });
@@ -189,35 +189,35 @@ class ApiClient {
 
   // Admin methods
   async createForm(form: Partial<Form>): Promise<Form> {
-    return this.request<Form>('/api/v2/admin/forms', {
+    return this.request<Form>('/api/admin/forms', {
       method: 'POST',
       body: JSON.stringify(form),
     });
   }
 
   async updateForm(formId: string, updates: Partial<Form>): Promise<void> {
-    await this.request(`/api/v2/admin/forms/${formId}`, {
+    await this.request(`/api/admin/forms/${formId}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
   }
 
   async deleteForm(formId: string): Promise<void> {
-    await this.request(`/api/v2/admin/forms/${formId}`, {
+    await this.request(`/api/admin/forms/${formId}`, {
       method: 'DELETE',
     });
   }
 
   async getFormResponses(formId: string): Promise<any[]> {
-    return this.request<any[]>(`/api/v2/admin/forms/${formId}/responses`);
+    return this.request<any[]>(`/api/admin/forms/${formId}/responses`);
   }
 
   async getFormStats(formId: string): Promise<any> {
-    return this.request<any>(`/api/v2/admin/forms/${formId}/stats`);
+    return this.request<any>(`/api/forms/${formId}/stats`);
   }
 
   async exportFormData(formId: string, format: string = 'csv'): Promise<any> {
-    return this.request<any>(`/api/v2/admin/forms/${formId}/export?format=${format}`);
+    return this.request<any>(`/api/admin/forms/${formId}/export?format=${format}`);
   }
 
   // Legacy endpoints (for backward compatibility)

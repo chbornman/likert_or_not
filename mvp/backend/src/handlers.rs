@@ -1,26 +1,27 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
 use chrono::Utc;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
 use uuid::Uuid;
 
 use crate::{
     AppState,
     error::AppError,
-    models_v3::*,
+    models::*,
 };
 
 /// List all published forms
 pub async fn list_forms(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
-    let forms: Vec<(String, String, Option<String>, Option<String>)> = sqlx::query_as(
+    let forms: Vec<(String, String, Option<String>, Option<String>, String, String, String)> = sqlx::query_as(
         r#"
-        SELECT id, title, description, instructions
+        SELECT id, title, description, instructions, status, created_at, updated_at
         FROM forms
         WHERE status != 'archived'
         ORDER BY updated_at DESC
@@ -30,12 +31,15 @@ pub async fn list_forms(
     .await
     .map_err(|e| AppError::Database(e))?;
     
-    let forms_json: Vec<JsonValue> = forms.into_iter().map(|(id, title, desc, instructions)| {
+    let forms_json: Vec<JsonValue> = forms.into_iter().map(|(id, title, desc, instructions, status, created_at, updated_at)| {
         json!({
             "id": id,
             "title": title,
             "description": desc,
-            "instructions": instructions
+            "instructions": instructions,
+            "status": status,
+            "created_at": created_at,
+            "updated_at": updated_at
         })
     }).collect();
     
@@ -430,5 +434,207 @@ pub async fn delete_respondent_pii(
     Ok(Json(json!({
         "message": "PII deleted successfully",
         "note": "Response data remains anonymous in the system"
+    })))
+}
+
+// Import form structures
+#[derive(Debug, Deserialize)]
+pub struct ImportFormRequest {
+    pub id: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub status: String,
+    pub welcome_message: Option<String>,
+    pub closing_message: Option<String>,
+    pub sections: Vec<ImportSection>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ImportSection {
+    pub id: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub position: i32,
+    pub questions: Vec<ImportQuestion>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ImportQuestion {
+    pub id: String,
+    pub title: String,
+    pub question_type: String,
+    pub is_required: bool,
+    pub position: i32,
+    pub help_text: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AuthQuery {
+    pub token: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AdminStatsQuery {
+    pub token: String,
+    pub form_id: String,
+}
+
+/// Get form stats for admin dashboard
+pub async fn get_admin_stats(
+    Query(params): Query<AdminStatsQuery>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, AppError> {
+    // Check admin token
+    if params.token != state.admin_token {
+        return Err(AppError::Unauthorized("Invalid admin token".to_string()));
+    }
+    
+    // Get stats for specific form
+    get_form_stats_anonymous(Path(params.form_id), State(state)).await
+}
+
+/// Get responses for admin (with PII)
+pub async fn get_admin_responses(
+    Query(params): Query<AdminStatsQuery>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, AppError> {
+    // Check admin token
+    if params.token != state.admin_token {
+        return Err(AppError::Unauthorized("Invalid admin token".to_string()));
+    }
+    
+    // Delegate to existing handler
+    get_responses_with_pii(Path(params.form_id), State(state)).await
+}
+
+/// Import a form from JSON configuration (admin only)
+pub async fn import_form(
+    Query(auth): Query<AuthQuery>,
+    State(state): State<AppState>,
+    Json(form_data): Json<ImportFormRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    // Check admin token
+    if auth.token != state.admin_token {
+        return Err(AppError::Unauthorized("Invalid admin token".to_string()));
+    }
+
+    // Start a transaction
+    let mut tx = state.db.begin().await.map_err(|e| AppError::Database(e))?;
+
+    // Check if form with this ID already exists
+    let existing: Option<(String,)> = sqlx::query_as(
+        "SELECT id FROM forms WHERE id = ?"
+    )
+    .bind(&form_data.id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| AppError::Database(e))?;
+
+    if existing.is_some() {
+        // Delete existing form and all related data
+        sqlx::query("DELETE FROM answers WHERE response_id IN (SELECT id FROM responses WHERE form_id = ?)")
+            .bind(&form_data.id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| AppError::Database(e))?;
+
+        sqlx::query("DELETE FROM responses WHERE form_id = ?")
+            .bind(&form_data.id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| AppError::Database(e))?;
+
+        sqlx::query("DELETE FROM questions WHERE form_id = ?")
+            .bind(&form_data.id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| AppError::Database(e))?;
+
+        sqlx::query("DELETE FROM sections WHERE form_id = ?")
+            .bind(&form_data.id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| AppError::Database(e))?;
+
+        sqlx::query("DELETE FROM forms WHERE id = ?")
+            .bind(&form_data.id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| AppError::Database(e))?;
+    }
+
+    // Insert the form
+    let now = Utc::now();
+    sqlx::query(
+        r#"
+        INSERT INTO forms (id, title, description, instructions, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        "#
+    )
+    .bind(&form_data.id)
+    .bind(&form_data.title)
+    .bind(&form_data.description)
+    .bind(&form_data.welcome_message)
+    .bind(&form_data.status)
+    .bind(now.to_rfc3339())
+    .bind(now.to_rfc3339())
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| AppError::Database(e))?;
+
+    // Insert sections and questions
+    let mut global_question_position = 0;
+    for section in form_data.sections {
+        // Insert section
+        sqlx::query(
+            r#"
+            INSERT INTO sections (id, form_id, title, description, position)
+            VALUES (?, ?, ?, ?, ?)
+            "#
+        )
+        .bind(&section.id)
+        .bind(&form_data.id)
+        .bind(&section.title)
+        .bind(&section.description)
+        .bind(section.position)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError::Database(e))?;
+
+        // Insert questions for this section
+        for question in section.questions {
+            global_question_position += 1;
+            let features = json!({
+                "required": question.is_required,
+                "helpText": question.help_text,
+            });
+
+            sqlx::query(
+                r#"
+                INSERT INTO questions (id, form_id, section_id, position, type, title, description, features)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                "#
+            )
+            .bind(&question.id)
+            .bind(&form_data.id)
+            .bind(&section.id)
+            .bind(global_question_position)
+            .bind(&question.question_type)
+            .bind(&question.title)
+            .bind(&question.help_text)
+            .bind(features.to_string())
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| AppError::Database(e))?;
+        }
+    }
+
+    // Commit the transaction
+    tx.commit().await.map_err(|e| AppError::Database(e))?;
+
+    Ok(Json(json!({
+        "message": "Form imported successfully",
+        "form_id": form_data.id,
+        "title": form_data.title
     })))
 }

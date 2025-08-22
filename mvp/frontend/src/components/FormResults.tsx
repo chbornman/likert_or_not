@@ -64,7 +64,7 @@ export default function FormResults() {
       setLoading(true);
       
       // Fetch form details with sections and questions
-      const formRes = await fetch(`/api/v2/forms/${formId}`);
+      const formRes = await fetch(`/api/forms/${formId}`);
       if (!formRes.ok) throw new Error('Failed to load form');
       const formData = await formRes.json();
       
