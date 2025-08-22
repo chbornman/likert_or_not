@@ -372,12 +372,13 @@ pub async fn get_responses_with_pii(
     
     for (id, form_id, name, email, role, submitted_at) in responses_raw {
         // Get answers for this response
-        let answers: Vec<(String, String, JsonValue)> = sqlx::query_as(
+        // Fetch as raw strings first, then parse JSON
+        let answers_raw: Vec<(String, String, String)> = sqlx::query_as(
             r#"
             SELECT 
                 a.question_id,
                 q.title,
-                a.value
+                CAST(a.value AS TEXT)
             FROM answers a
             JOIN questions q ON q.id = a.question_id
             WHERE a.response_id = ?
@@ -388,6 +389,15 @@ pub async fn get_responses_with_pii(
         .fetch_all(&state.db)
         .await
         .map_err(|e| AppError::Database(e))?;
+        
+        let answers: Vec<(String, String, JsonValue)> = answers_raw
+            .into_iter()
+            .map(|(q_id, title, value_str)| {
+                let value: JsonValue = serde_json::from_str(&value_str)
+                    .unwrap_or(JsonValue::Null);
+                (q_id, title, value)
+            })
+            .collect();
         
         let answers_formatted = answers.into_iter().map(|(q_id, q_title, value)| {
             AnswerWithQuestion {
@@ -442,6 +452,7 @@ pub struct ImportFormRequest {
     pub id: String,
     pub title: String,
     pub description: Option<String>,
+    pub instructions: Option<String>,
     pub status: String,
     pub welcome_message: Option<String>,
     pub closing_message: Option<String>,
@@ -473,6 +484,7 @@ pub struct ImportQuestion {
 pub struct UpdateFormRequest {
     pub title: String,
     pub description: Option<String>,
+    pub instructions: Option<String>,
     pub welcome_message: Option<String>,
     pub closing_message: Option<String>,
     pub status: String,
@@ -559,6 +571,28 @@ pub async fn import_form(
         return Err(AppError::Unauthorized("Invalid admin token".to_string()));
     }
 
+    // Validate unique question IDs within the form
+    let mut question_ids = std::collections::HashSet::new();
+    for section in &form_data.sections {
+        for question in &section.questions {
+            if !question_ids.insert(question.id.clone()) {
+                return Err(AppError::BadRequest(
+                    format!("Duplicate question ID found: '{}'. All question IDs must be unique within a form.", question.id)
+                ));
+            }
+        }
+    }
+    
+    // Validate unique section IDs within the form
+    let mut section_ids = std::collections::HashSet::new();
+    for section in &form_data.sections {
+        if !section_ids.insert(section.id.clone()) {
+            return Err(AppError::BadRequest(
+                format!("Duplicate section ID found: '{}'. All section IDs must be unique within a form.", section.id)
+            ));
+        }
+    }
+
     // Start a transaction
     let mut tx = state.db.begin().await.map_err(|e| AppError::Database(e))?;
 
@@ -615,7 +649,7 @@ pub async fn import_form(
     .bind(&form_data.id)
     .bind(&form_data.title)
     .bind(&form_data.description)
-    .bind(&form_data.welcome_message)
+    .bind(&form_data.instructions)
     .bind("draft")  // Always start imported forms as draft
     .bind(now.to_rfc3339())
     .bind(now.to_rfc3339())
@@ -719,7 +753,7 @@ pub async fn update_form(
     )
     .bind(&form_data.title)
     .bind(&form_data.description)
-    .bind(&form_data.welcome_message)
+    .bind(&form_data.instructions)
     .bind(&form_data.status)
     .bind(now.to_rfc3339())
     .bind(&form_id)

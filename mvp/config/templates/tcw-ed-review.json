@@ -4,7 +4,8 @@
   "title": "TCW Executive Director Performance Review",
   "description": "Performance review for the Executive Director covering January - June 2025",
   "status": "published",
-  "welcome_message": "This review covers the performance period from January - June 2025. Results and comments will be viewed in aggregate by role (staff / board / ED).\n\nFor reference, the Executive Director job description summary:\n\nThe Executive Director will be responsible for strategic planning, operational management, community outreach, and volunteer coordination and will work closely with the Board of Directors to ensure the financial health and sustainability of the organization while enhancing its programs and services. This role requires a hands-on leader who is both a strategic thinker and a practical manager, capable of inspiring staff, volunteers, and community partners.",
+  "instructions": "This review covers the performance period from January - June 2025. Results and comments will be viewed in aggregate by role (staff / board / ED).\n\nFor reference, the Executive Director job description summary:\n\nThe Executive Director will be responsible for strategic planning, operational management, community outreach, and volunteer coordination and will work closely with the Board of Directors to ensure the financial health and sustainability of the organization while enhancing its programs and services. This role requires a hands-on leader who is both a strategic thinker and a practical manager, capable of inspiring staff, volunteers, and community partners.",
+  "welcome_message": "",
   "closing_message": "Thank you for completing this performance review. Your feedback is valuable in supporting the Executive Director's continued growth and success.",
   "sections": [
     {

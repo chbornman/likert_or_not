@@ -53,6 +53,7 @@ interface FormData {
   id: string;
   title: string;
   description?: string;
+  instructions?: string;
   welcome_message?: string;
   closing_message?: string;
   status: 'draft' | 'published' | 'archived';
@@ -86,6 +87,7 @@ export default function FormEditor() {
         id: `form-${Date.now()}`,
         title: 'New Form',
         description: '',
+        instructions: '',
         welcome_message: '',
         closing_message: '',
         status: 'draft',
@@ -120,6 +122,7 @@ export default function FormEditor() {
         id: data.id,
         title: data.title,
         description: data.description,
+        instructions: data.instructions,
         welcome_message: data.welcome_message,
         closing_message: data.closing_message,
         status: data.status || 'draft',
@@ -386,6 +389,17 @@ export default function FormEditor() {
                 onChange={(e) => updateForm({ description: e.target.value })}
                 placeholder="Brief description of the form"
                 rows={2}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="instructions">Initial Instructions</Label>
+              <Textarea
+                id="instructions"
+                value={form.instructions || ''}
+                onChange={(e) => updateForm({ instructions: e.target.value })}
+                placeholder="Instructions shown at the beginning of the form (e.g., review period, context, etc.)"
+                rows={4}
               />
             </div>
             
