@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileSpreadsheet, Upload, Plus } from 'lucide-react';
+import { FileSpreadsheet, Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface Form {
@@ -119,6 +119,7 @@ export default function AdminDashboard() {
     setPassword('');
     setForms([]);
     setFormStats(new Map());
+    navigate('/');
   };
 
   const navigateToFormResults = (formId: string) => {
