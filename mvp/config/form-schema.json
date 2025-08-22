@@ -18,6 +18,10 @@
       "type": "string",
       "description": "Brief description of the form's purpose"
     },
+    "instructions": {
+      "type": "string",
+      "description": "Instructions shown at the beginning of the form"
+    },
     "status": {
       "type": "string",
       "enum": ["draft", "published", "archived"],

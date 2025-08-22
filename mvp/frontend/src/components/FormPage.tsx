@@ -45,13 +45,14 @@ export default function FormPage() {
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [role, setRole] = useState('');
   const [answers, setAnswers] = useState<Map<number, AnswerInput>>(new Map());
 
   // Save to local storage whenever form data changes
   useEffect(() => {
     if (!loading && formData) {
       // Only save if user has actually entered some data
-      const hasData = name.trim() || email.trim() || 
+      const hasData = name.trim() || email.trim() || role.trim() ||
         Array.from(answers.values()).some(a => a.likert_value !== null || a.comment);
       
       if (hasData) {
@@ -62,6 +63,7 @@ export default function FormPage() {
         const dataToSave = {
           name,
           email,
+          role,
           currentSection,
           answers: Array.from(answers.entries()),
           savedAt: new Date().toISOString(),
@@ -75,7 +77,7 @@ export default function FormPage() {
         }, 250);
       }
     }
-  }, [name, email, answers, currentSection, loading, formData]);
+  }, [name, email, role, answers, currentSection, loading, formData]);
 
   useEffect(() => {
     fetchForm();
@@ -89,13 +91,14 @@ export default function FormPage() {
     }
     
     try {
-      const response = await fetch(`/api/v2/forms/${formId}`);
+      const response = await fetch(`/api/forms/${formId}`);
       if (!response.ok) throw new Error('Failed to load form');
       const data = await response.json();
       // Transform v2 data to match original format - include ALL questions
       const transformedData = {
         title: data.title,
         description: data.description,
+        instructions: data.instructions,
         questions: data.sections.flatMap((section: any) => 
           section.questions.map((q: any) => ({
             id: parseInt(q.id.replace('q', '')),
@@ -126,6 +129,7 @@ export default function FormPage() {
           if (hoursSinceSaved < 24) {
             setName(parsed.name || '');
             setEmail(parsed.email || '');
+            setRole(parsed.role || '');
             setCurrentSection(parsed.currentSection ?? -1);
             
             // Restore answers
@@ -295,9 +299,10 @@ export default function FormPage() {
     const newTouched = new Set(touchedFields);
     newTouched.add('name');
     newTouched.add('email');
+    newTouched.add('role');
     setTouchedFields(newTouched);
     
-    return name.trim() !== '' && email.trim() !== '' && email.includes('@');
+    return name.trim() !== '' && email.trim() !== '' && email.includes('@') && role !== '';
   };
 
   const handleNextSection = () => {
@@ -395,12 +400,13 @@ export default function FormPage() {
           };
         });
       
-      const response = await fetch(`/api/v2/forms/${formId}/submit`, {
+      const response = await fetch(`/api/forms/${formId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           respondent_name: name,
           respondent_email: email,
+          role: role,
           answers: v2Answers,
         }),
       });
@@ -555,6 +561,23 @@ export default function FormPage() {
           <CardContent className="pt-6 sm:pt-8 px-3 sm:px-6">
             {currentSection === -1 ? (
               <div className="space-y-6">
+                {/* Instructions section */}
+                {formData.instructions && (
+                  <div className="bg-gradient-to-r from-cerulean/10 to-cambridge-blue/10 rounded-lg p-4 border border-cambridge-blue/20">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-cerulean mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div>
+                        <h3 className="font-semibold text-gunmetal text-sm mb-2">Instructions</h3>
+                        <p className="text-gunmetal/70 text-sm whitespace-pre-wrap">
+                          {formData.instructions}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Time estimate section */}
                 <div className="bg-gradient-to-r from-cambridge-blue/10 to-cerulean/10 rounded-lg p-4 border border-cambridge-blue/20">
                   <div className="flex items-start gap-3">
@@ -631,6 +654,61 @@ export default function FormPage() {
                   {touchedFields.has('email') && (!email.trim() || !email.includes('@')) && (
                     <p className="text-rose-quartz text-sm mt-1 font-medium">Valid email is required</p>
                   )}
+                </div>
+                
+                {/* Role selection */}
+                <div>
+                  <Label className="text-gunmetal font-semibold">
+                    Your Role <span className="text-rose-quartz font-bold">*</span>
+                  </Label>
+                  <div className="mt-3 space-y-2">
+                    {[
+                      { value: 'staff', label: 'Staff Member' },
+                      { value: 'board', label: 'Board Member' },
+                      { value: 'executive', label: 'Executive Director' },
+                      { value: 'other', label: 'Other' }
+                    ].map((option) => (
+                      <label
+                        key={option.value}
+                        className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all hover:bg-cambridge-blue/5 
+                          ${role === option.value ? 'border-cerulean bg-cerulean/10' : 'border-cambridge-blue/30 bg-white/80'}`}
+                      >
+                        <input
+                          type="radio"
+                          name="role"
+                          value={option.value}
+                          checked={role === option.value}
+                          onChange={(e) => {
+                            setRole(e.target.value);
+                            if (error && e.target.value) {
+                              setError('');
+                            }
+                          }}
+                          className="w-4 h-4 text-cerulean focus:ring-cerulean"
+                        />
+                        <span className="text-gunmetal">{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {touchedFields.has('role') && !role && (
+                    <p className="text-rose-quartz text-sm mt-2 font-medium">Please select your role</p>
+                  )}
+                </div>
+                
+                {/* Privacy notice */}
+                <div className="bg-cream/40 rounded-lg p-4 border border-cambridge-blue/20">
+                  <div className="flex items-start gap-3">
+                    <svg className="w-5 h-5 text-cambridge-blue mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <div>
+                      <h3 className="font-semibold text-gunmetal text-sm">Privacy Notice</h3>
+                      <p className="text-gunmetal/70 text-xs mt-1">
+                        Your name and email are collected solely for identity verification and to ensure unique responses. 
+                        This information will not be linked to your individual scores or comments in any reports.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (

@@ -13,6 +13,7 @@ export interface Question {
 export interface FormData {
   title: string;
   description: string;
+  instructions?: string;
   questions: Question[];
   settings?: any;
 }
@@ -27,6 +28,7 @@ export interface AnswerInput {
 export interface SubmissionRequest {
   respondent_name: string;
   respondent_email: string;
+  role?: string;
   answers: AnswerInput[];
 }
 
