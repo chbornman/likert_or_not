@@ -26,7 +26,7 @@ export default function HomePage() {
 
   const fetchForms = async () => {
     try {
-      const response = await fetch('/api/v2/forms');
+      const response = await fetch('/api/forms');
       if (!response.ok) throw new Error('Failed to load forms');
       const data = await response.json();
       
@@ -77,21 +77,6 @@ export default function HomePage() {
     );
   }
 
-  if (forms.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 flex items-center justify-center px-4">
-        <Card className="max-w-md w-full">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl text-gunmetal">No Forms Available</CardTitle>
-            <CardDescription>
-              There are no forms available to fill out at this time. Please check back later.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
@@ -101,13 +86,14 @@ export default function HomePage() {
             Available Forms
           </h1>
           <p className="text-lg text-gray-600">
-            Select a form below to get started
+            {forms.length > 0 ? 'Select a form below to get started' : 'There are no forms available to fill out at this time. Please check back later.'}
           </p>
         </div>
 
-        {/* Forms Grid */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {forms.map(form => (
+        {/* Forms Grid or Empty State */}
+        {forms.length > 0 ? (
+          <div className="grid gap-6 md:grid-cols-2">
+            {forms.map(form => (
             <Card 
               key={form.id} 
               className="hover:shadow-xl transition-all hover:scale-105 cursor-pointer"
@@ -155,7 +141,17 @@ export default function HomePage() {
               </CardContent>
             </Card>
           ))}
-        </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <Card className="max-w-md mx-auto">
+              <CardContent className="pt-6">
+                <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No forms are currently available.</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Admin Link */}
         <div className="text-center mt-12">
