@@ -79,7 +79,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-800 mb-4">
@@ -92,11 +92,11 @@ export default function HomePage() {
 
         {/* Forms Grid or Empty State */}
         {forms.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="flex flex-wrap justify-center gap-6">
             {forms.map(form => (
             <Card 
               key={form.id} 
-              className="hover:shadow-xl transition-all hover:scale-105 cursor-pointer"
+              className="hover:shadow-xl transition-all hover:scale-105 cursor-pointer w-full max-w-md flex-shrink-0"
               onClick={() => startForm(form.id)}
             >
               <CardHeader className="bg-gradient-to-r from-cambridge-blue/10 to-cerulean/10">
