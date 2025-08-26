@@ -1,4 +1,4 @@
-.PHONY: help dev prod build clean install
+.PHONY: help dev prod build clean install test test-unit test-e2e test-integration test-coverage
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -38,3 +38,32 @@ clean: ## Clean build artifacts and data
 reset-db: ## Reset the database (WARNING: deletes all data)
 	rm -f data/*.db data/*.db-shm data/*.db-wal
 	@echo "Database reset. It will be recreated on next run."
+
+test: ## Run all tests
+	./run_tests.sh
+
+test-unit: ## Run unit tests only
+	@echo "Running frontend unit tests..."
+	cd frontend && bun test src/**/__tests__
+	@echo "Running backend unit tests..."
+	cd backend && cargo test --lib
+
+test-e2e: ## Run E2E tests
+	./run_tests.sh --e2e
+
+test-integration: ## Run integration tests
+	./run_tests.sh --integration
+
+test-coverage: ## Run tests with coverage report
+	./run_tests.sh --coverage
+
+test-watch: ## Run tests in watch mode
+	cd frontend && bun test --watch
+
+lint: ## Run linters
+	cd frontend && bun run lint
+	cd backend && cargo clippy -- -D warnings
+
+fmt: ## Format code
+	cd frontend && bunx prettier --write "src/**/*.{ts,tsx}"
+	cd backend && cargo fmt
