@@ -60,8 +60,17 @@ RUN mkdir -p /app/data && \
     useradd -m -u 1000 appuser && \
     chown -R appuser:appuser /app
 
+# Create entrypoint script to ensure proper permissions at runtime
+RUN echo '#!/bin/sh\n\
+# Ensure data directory exists and is writable\n\
+mkdir -p /app/data\n\
+# Start the application\n\
+exec /app/likert-form-mvp' > /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh && \
+    chown appuser:appuser /app/entrypoint.sh
+
 USER appuser
 
 EXPOSE 3000
 
-CMD ["/app/likert-form-mvp"]
+CMD ["/app/entrypoint.sh"]

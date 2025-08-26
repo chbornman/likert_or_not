@@ -39,30 +39,37 @@ impl IntoResponse for AppError {
         let (status, error_message) = match self {
             AppError::Database(e) => {
                 tracing::error!("Database error: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Database error occurred")
+                // In production, hide database error details for security
+                // In development, show the actual error
+                let error_msg = if cfg!(debug_assertions) {
+                    format!("Database error: {}", e)
+                } else {
+                    "Database error occurred".to_string()
+                };
+                (StatusCode::INTERNAL_SERVER_ERROR, error_msg)
             }
             AppError::DatabaseError(ref msg) => {
                 tracing::error!("Database error: {}", msg);
-                (StatusCode::INTERNAL_SERVER_ERROR, msg.as_str())
+                (StatusCode::INTERNAL_SERVER_ERROR, msg.clone())
             }
             AppError::Unauthorized(ref msg) => {
-                (StatusCode::UNAUTHORIZED, msg.as_str())
+                (StatusCode::UNAUTHORIZED, msg.clone())
             }
             AppError::BadRequest(ref msg) => {
-                (StatusCode::BAD_REQUEST, msg.as_str())
+                (StatusCode::BAD_REQUEST, msg.clone())
             }
             AppError::NotFound(ref msg) => {
-                (StatusCode::NOT_FOUND, msg.as_str())
+                (StatusCode::NOT_FOUND, msg.clone())
             }
             AppError::ValidationError(ref msg) => {
-                (StatusCode::BAD_REQUEST, msg.as_str())
+                (StatusCode::BAD_REQUEST, msg.clone())
             }
             AppError::InternalError(ref msg) => {
                 tracing::error!("Internal error: {}", msg);
-                (StatusCode::INTERNAL_SERVER_ERROR, msg.as_str())
+                (StatusCode::INTERNAL_SERVER_ERROR, msg.clone())
             }
             AppError::InternalServerError => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
+                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
             }
         };
 
