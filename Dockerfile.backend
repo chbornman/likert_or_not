@@ -39,8 +39,8 @@ COPY --from=builder /app/migrations /app/migrations
 # Copy config directory with template
 COPY config /app/config
 
-# Create directory for SQLite database
-RUN mkdir -p /app/data
+# Create directory for SQLite database with proper permissions
+RUN mkdir -p /app/data && chmod 777 /app/data
 
 ENV DATABASE_URL=sqlite:///app/data/likert_form.db
 

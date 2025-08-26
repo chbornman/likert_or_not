@@ -39,13 +39,8 @@ impl IntoResponse for AppError {
         let (status, error_message) = match self {
             AppError::Database(e) => {
                 tracing::error!("Database error: {:?}", e);
-                // In production, hide database error details for security
-                // In development, show the actual error
-                let error_msg = if cfg!(debug_assertions) {
-                    format!("Database error: {}", e)
-                } else {
-                    "Database error occurred".to_string()
-                };
+                // Temporarily show detailed errors for debugging
+                let error_msg = format!("Database error: {}", e);
                 (StatusCode::INTERNAL_SERVER_ERROR, error_msg)
             }
             AppError::DatabaseError(ref msg) => {
