@@ -3,9 +3,9 @@
 ## Build/Test Commands
 ```bash
 # Frontend (from mvp/frontend)
-npm run dev        # Start dev server
-npm run build      # TypeScript check + build
-npm run lint       # ESLint with --max-warnings 0
+bun run dev        # Start dev server
+bun run build      # TypeScript check + build
+bun run lint       # ESLint with --max-warnings 0
 
 # Backend (from mvp/backend)  
 cargo build        # Build Rust backend

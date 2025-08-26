@@ -1,0 +1,55 @@
+# Production Docker Compose for Coolify deployment
+# Uses pre-built images from Docker Hub
+
+services:
+  # Backend API Service
+  backend:
+    image: chbornman/likert-or-not-backend:latest
+    pull_policy: always
+    environment:
+      # Database - SQLite with persistent volume
+      DATABASE_URL: sqlite:///app/data/likert_form.db?mode=rwc
+      
+      # Application
+      RUST_LOG: ${RUST_LOG:-info}
+      PORT: 3000
+      
+      # Admin & Email
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      NOTIFICATION_EMAIL: ${NOTIFICATION_EMAIL:-}
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
+    volumes:
+      - likert-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/forms"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - likert-network
+    # Port 3000 exposed internally only - frontend nginx will proxy to it
+
+  # Frontend Service with Nginx
+  frontend:
+    image: chbornman/likert-or-not-frontend:latest
+    pull_policy: always
+    environment:
+      NODE_ENV: production
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - likert-network
+    ports:
+      - "${PORT:-3001}:80"  # Map internal nginx port 80 to external port for Coolify
+    
+volumes:
+  likert-data:
+    driver: local
+
+networks:
+  likert-network:
+    driver: bridge
