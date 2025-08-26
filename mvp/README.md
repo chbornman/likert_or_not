@@ -85,8 +85,8 @@ cargo run
 
 ```bash
 cd frontend
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 ## Admin Access

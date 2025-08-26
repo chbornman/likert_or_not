@@ -1,5 +1,6 @@
 use serde_json::json;
 
+#[allow(dead_code)]
 pub async fn send_notification(
     api_key: &str,
     to_email: &str,

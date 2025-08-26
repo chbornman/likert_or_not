@@ -5,7 +5,7 @@ use axum::{
     Json,
 };
 use chrono::Utc;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::{json, Value as JsonValue};
 use uuid::Uuid;
 
@@ -51,9 +51,9 @@ pub async fn get_form(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
     // Fetch the form
-    let form: Option<(String, String, Option<String>, Option<String>, String)> = sqlx::query_as(
+    let form: Option<(String, String, Option<String>, Option<String>, String, Option<String>, Option<String>, Option<JsonValue>)> = sqlx::query_as(
         r#"
-        SELECT id, title, description, instructions, status
+        SELECT id, title, description, instructions, status, welcome_message, closing_message, settings
         FROM forms
         WHERE id = ?
         "#
@@ -63,7 +63,7 @@ pub async fn get_form(
     .await
     .map_err(|e| AppError::Database(e))?;
 
-    if let Some((id, title, desc, instructions, status)) = form {
+    if let Some((id, title, desc, instructions, status, welcome_message, closing_message, settings)) = form {
         // Fetch sections
         let sections: Vec<(String, String, String, Option<String>, i32)> = sqlx::query_as(
             r#"
@@ -126,6 +126,9 @@ pub async fn get_form(
             "description": desc,
             "instructions": instructions,
             "status": status,
+            "welcome_message": welcome_message,
+            "closing_message": closing_message,
+            "settings": settings,
             "sections": sections_with_questions
         })))
     } else {
@@ -456,6 +459,7 @@ pub struct ImportFormRequest {
     pub status: String,
     pub welcome_message: Option<String>,
     pub closing_message: Option<String>,
+    pub settings: Option<JsonValue>,
     pub sections: Vec<ImportSection>,
 }
 
@@ -640,19 +644,28 @@ pub async fn import_form(
             .map_err(|e| AppError::Database(e))?;
     }
 
-    // Insert the form (always start as draft)
+    // Insert the form with all fields
     let now = Utc::now();
+    let settings_json = if let Some(settings) = &form_data.settings {
+        settings.to_string()
+    } else {
+        "{}".to_string()
+    };
+    
     sqlx::query(
         r#"
-        INSERT INTO forms (id, title, description, instructions, status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO forms (id, title, description, instructions, status, welcome_message, closing_message, settings, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         "#
     )
     .bind(&form_data.id)
     .bind(&form_data.title)
     .bind(&form_data.description)
     .bind(&form_data.instructions)
-    .bind("draft")  // Always start imported forms as draft
+    .bind(&form_data.status)  // Use the status from the import
+    .bind(&form_data.welcome_message)
+    .bind(&form_data.closing_message)
+    .bind(settings_json)
     .bind(now.to_rfc3339())
     .bind(now.to_rfc3339())
     .execute(&mut *tx)
@@ -680,7 +693,9 @@ pub async fn import_form(
 
         // Insert questions for this section
         for question in section.questions {
+            // Always use global counter to ensure unique positions across all sections
             global_question_position += 1;
+            let position = global_question_position;
             
             // Start with features from the template if provided
             let mut features = if let Some(template_features) = question.features {
@@ -706,7 +721,7 @@ pub async fn import_form(
             .bind(&question.id)
             .bind(&form_data.id)
             .bind(&section.id)
-            .bind(global_question_position)
+            .bind(position)
             .bind(&question.question_type)
             .bind(&question.title)
             .bind(&question.help_text)
@@ -755,12 +770,19 @@ pub async fn update_form(
         return Err(AppError::BadRequest("Form not found".to_string()));
     }
 
-    // Update the form metadata
+    // Update the form metadata with all fields
     let now = Utc::now();
+    let settings_json = if let Some(settings) = &form_data.settings {
+        settings.to_string()
+    } else {
+        "{}".to_string()
+    };
+    
     sqlx::query(
         r#"
         UPDATE forms 
-        SET title = ?, description = ?, instructions = ?, status = ?, updated_at = ?
+        SET title = ?, description = ?, instructions = ?, status = ?, 
+            welcome_message = ?, closing_message = ?, settings = ?, updated_at = ?
         WHERE id = ?
         "#
     )
@@ -768,6 +790,9 @@ pub async fn update_form(
     .bind(&form_data.description)
     .bind(&form_data.instructions)
     .bind(&form_data.status)
+    .bind(&form_data.welcome_message)
+    .bind(&form_data.closing_message)
+    .bind(settings_json)
     .bind(now.to_rfc3339())
     .bind(&form_id)
     .execute(&mut *tx)
@@ -808,7 +833,9 @@ pub async fn update_form(
 
         // Insert questions for this section
         for question in section.questions {
+            // Always use global counter to ensure unique positions across all sections
             global_question_position += 1;
+            let position = global_question_position;
             
             // Start with features from the request if provided
             let mut features = if let Some(template_features) = question.features {
@@ -845,7 +872,7 @@ pub async fn update_form(
             .bind(&question.id)
             .bind(&form_id)
             .bind(&section.id)
-            .bind(global_question_position)
+            .bind(position)
             .bind(&question.question_type)
             .bind(&question.title)
             .bind(&question.help_text)
