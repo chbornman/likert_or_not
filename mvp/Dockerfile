@@ -1,17 +1,17 @@
 # Single container with both frontend and backend
 # Build frontend
-FROM oven/bun:1 as frontend-builder
+FROM oven/bun:1 AS frontend-builder
 
 WORKDIR /app
 
-COPY frontend/package.json frontend/bun.lock* ./
+COPY frontend/package.json frontend/bun.lock ./
 RUN bun install
 
 COPY frontend/ ./
 RUN bun run build
 
 # Build backend
-FROM rustlang/rust:nightly as backend-builder
+FROM rustlang/rust:nightly AS backend-builder
 
 WORKDIR /app
 
@@ -52,10 +52,17 @@ ENV STATIC_DIR=/app/frontend/dist
 
 EXPOSE 3000
 
-# Use a shell script to ensure permissions before starting the app
+# Create a non-root user to run the app
+RUN useradd -m -u 1000 appuser && \
+    mkdir -p /app/data && \
+    chown -R appuser:appuser /app
+
+# Use a shell script to ensure proper startup
 RUN echo '#!/bin/sh\n\
 mkdir -p /app/data\n\
-chmod 777 /app/data\n\
 exec ./likert-form-mvp' > /app/start.sh && chmod +x /app/start.sh
+
+# Switch to non-root user
+USER appuser
 
 CMD ["/app/start.sh"]
