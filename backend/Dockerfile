@@ -55,22 +55,17 @@ COPY --from=builder /app/migrations /app/migrations
 # Copy config directory with form template (build context is project root)
 COPY ./config /app/config
 
-# Create data directory for SQLite
-RUN mkdir -p /app/data && \
-    useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app
+# Create data directory for SQLite - run as root to avoid permission issues
+RUN mkdir -p /app/data && chmod 777 /app/data
 
-# Create entrypoint script to ensure proper permissions at runtime
+# Create entrypoint script that runs as root to handle volume permissions
 RUN echo '#!/bin/sh\n\
-# Ensure data directory exists and is writable\n\
+# Ensure data directory exists and is writable by all users\n\
 mkdir -p /app/data\n\
 chmod 777 /app/data\n\
 # Start the application\n\
 exec /app/likert-form-mvp' > /app/entrypoint.sh && \
-    chmod +x /app/entrypoint.sh && \
-    chown appuser:appuser /app/entrypoint.sh
-
-USER appuser
+    chmod +x /app/entrypoint.sh
 
 EXPOSE 3000
 
