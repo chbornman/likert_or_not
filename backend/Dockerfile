@@ -64,6 +64,7 @@ RUN mkdir -p /app/data && \
 RUN echo '#!/bin/sh\n\
 # Ensure data directory exists and is writable\n\
 mkdir -p /app/data\n\
+chmod 777 /app/data\n\
 # Start the application\n\
 exec /app/likert-form-mvp' > /app/entrypoint.sh && \
     chmod +x /app/entrypoint.sh && \
