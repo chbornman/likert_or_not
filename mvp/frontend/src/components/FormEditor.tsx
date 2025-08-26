@@ -568,7 +568,23 @@ export default function FormEditor() {
                             <Textarea
                               value={question.options?.join('\n') || ''}
                               onChange={(e) => {
-                                const options = e.target.value.split('\n').filter(o => o.trim());
+                                // Allow natural text editing including newlines
+                                const rawText = e.target.value;
+                                // Only split into array when we have actual content
+                                if (rawText) {
+                                  // Don't filter during typing - preserve all lines including empty ones
+                                  const options = rawText.split('\n');
+                                  updateQuestion(section.id, question.id, { options });
+                                } else {
+                                  updateQuestion(section.id, question.id, { options: [] });
+                                }
+                              }}
+                              onBlur={(e) => {
+                                // Clean up empty lines only when user finishes editing
+                                const options = e.target.value
+                                  .split('\n')
+                                  .map(o => o.trim())
+                                  .filter(o => o.length > 0);
                                 updateQuestion(section.id, question.id, { options });
                               }}
                               placeholder={`Option 1\nOption 2\nOption 3`}
