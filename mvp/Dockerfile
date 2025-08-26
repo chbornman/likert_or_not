@@ -1,14 +1,14 @@
 # Single container with both frontend and backend
 # Build frontend
-FROM node:20-alpine as frontend-builder
+FROM oven/bun:1 as frontend-builder
 
 WORKDIR /app
 
-COPY frontend/package*.json ./
-RUN npm ci
+COPY frontend/package.json frontend/bun.lock* ./
+RUN bun install --frozen-lockfile
 
 COPY frontend/ ./
-RUN npm run build
+RUN bun run build
 
 # Build backend
 FROM rustlang/rust:nightly as backend-builder

@@ -6,7 +6,7 @@ help: ## Show this help message
 
 install: ## Install dependencies for local development
 	cd backend && cargo build
-	cd frontend && npm install
+	cd frontend && bun install
 
 dev: ## Start development environment with Docker Compose
 	docker compose -f docker-compose.dev.yml up
@@ -15,7 +15,7 @@ dev-local: ## Start local development without Docker
 	@echo "Starting backend..."
 	cd backend && cargo run &
 	@echo "Starting frontend..."
-	cd frontend && npm run dev
+	cd frontend && bun run dev
 
 build: ## Build production Docker image
 	docker compose build

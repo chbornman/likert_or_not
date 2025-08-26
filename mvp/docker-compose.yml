@@ -19,7 +19,7 @@ services:
     command: ./likert-form-mvp
 
   frontend:
-    image: node:20-alpine
+    image: oven/bun:1
     working_dir: /app
     ports:
       - "5173:5173"
@@ -32,8 +32,8 @@ services:
       - likert-network
     command: >
       sh -c "
-        npm install &&
-        npm run dev -- --host 0.0.0.0
+        bun install &&
+        bun run dev -- --host 0.0.0.0
       "
 
 networks:
