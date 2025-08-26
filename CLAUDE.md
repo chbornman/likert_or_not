@@ -8,46 +8,35 @@ A Likert scale form builder application with a Rust/Axum backend and React/TypeS
 
 ## Development Commands
 
-### Quick Start (Docker Compose)
+### Docker (Production Only)
 ```bash
-# Development environment
-make dev
-# OR
-docker compose -f docker-compose.dev.yml up
+# Docker is used for production deployment only
+# For local development, run the services directly (see below)
 
-# Production environment  
-make prod
-# OR
-docker compose up -d
+# Production deployment
+docker compose -f docker-compose.production.yml up -d
 ```
 
-### Local Development (Without Docker)
+### Local Development
 ```bash
 # Install dependencies
-make install
+cd frontend && bun install
+cd backend && cargo build
 
 # Start backend (from backend/ directory)
 cd backend && cargo run
 
-# Start frontend (from frontend/ directory)  
+# Start frontend (from frontend/ directory)
 cd frontend && bun run dev
 
-# Or run both locally
-make dev-local
+# Backend runs on http://localhost:3000
+# Frontend runs on http://localhost:5173
 ```
 
 ### Testing Commands
 ```bash
 # Run all tests (comprehensive suite)
-make test
-# OR
 ./scripts/run_tests.sh
-
-# Specific test types
-make test-unit          # Frontend and backend unit tests
-make test-e2e           # End-to-end tests with Playwright
-make test-integration   # Backend integration tests
-make test-coverage      # Coverage reports
 
 # Frontend specific
 cd frontend && bun test              # All frontend tests
@@ -59,12 +48,10 @@ cd frontend && bun test test/e2e     # E2E tests only
 ### Code Quality
 ```bash
 # Linting
-make lint
 cd frontend && bun run lint          # ESLint
 cd backend && cargo clippy -- -D warnings
 
 # Formatting
-make fmt
 cd frontend && bunx prettier --write "src/**/*.{ts,tsx}"
 cd backend && cargo fmt
 ```
@@ -72,20 +59,20 @@ cd backend && cargo fmt
 ### Build Commands
 ```bash
 # Build production Docker images
-make build
-docker compose build
+docker compose -f docker-compose.production.yml build
 
 # Frontend build
 cd frontend && bun run build
 
-# Backend build  
+# Backend build
 cd backend && cargo build --release
 ```
 
 ### Database Management
 ```bash
 # Reset database (WARNING: deletes all data)
-make reset-db
+rm backend/data/likert_form.db
+cd backend && cargo run  # Will recreate database on startup
 
 # Run individual migrations
 cd backend && sqlx migrate run
@@ -95,7 +82,7 @@ cd backend && sqlx migrate run
 
 ### Backend (Rust + Axum)
 - **Framework**: Axum web framework with tokio async runtime
-- **Database**: SQLite with SQLx for queries and migrations  
+- **Database**: SQLite with SQLx for queries and migrations
 - **Authentication**: Token-based admin access (no user registration system)
 - **Email**: Resend API integration for notifications
 - **Location**: `backend/src/`
@@ -127,7 +114,7 @@ Key frontend structure:
 ### Database Schema
 SQLite database with the following key tables:
 - `forms` - Form definitions and metadata
-- `sections` - Form sections for organization  
+- `sections` - Form sections for organization
 - `questions` - Individual questions with configuration
 - `responses` - Response metadata (anonymous)
 - `respondents` - PII data stored separately for privacy
@@ -145,7 +132,7 @@ Authentication uses a simple admin token (set via `ADMIN_TOKEN` env var) rather 
 ## Environment Setup
 
 Copy `.env.example` to `.env` and configure:
-- `ADMIN_TOKEN` - Required: Secure token for admin access  
+- `ADMIN_TOKEN` - Required: Secure token for admin access
 - `DATABASE_URL` - SQLite database path
 - `RESEND_API_KEY` - Optional: For email notifications
 - `NOTIFICATION_EMAIL` - Optional: Receives form submission notifications
@@ -158,7 +145,7 @@ The application supports multiple question types defined in `frontend/src/types.
 - `text` - Single-line text input
 - `textarea` - Multi-line text input
 - `multiple_choice` - Single selection from options
-- `checkbox` - Multiple selections  
+- `checkbox` - Multiple selections
 - `dropdown` - Dropdown selection
 - `yes_no` - Boolean yes/no questions
 - `rating` - Star or number rating scale
@@ -177,12 +164,13 @@ The application supports multiple question types defined in `frontend/src/types.
 
 ## Development Workflow
 
-1. Use Docker Compose for quick development: `make dev`
+1. For local development, run services directly (backend: `cargo run`, frontend: `bun run dev`)
 2. For backend changes, work in `backend/src/` and test with `cargo test`
 3. For frontend changes, work in `frontend/src/` and test with `bun test`
-4. Run linting before commits: `make lint`
-5. Use the comprehensive test suite: `make test`
+4. Run linting before commits: `bun run lint` and `cargo clippy`
+5. Use the comprehensive test suite: `./scripts/run_tests.sh`
 6. Database migrations are handled automatically on startup
+7. Docker is only used for production deployment
 
 ## Testing Strategy
 

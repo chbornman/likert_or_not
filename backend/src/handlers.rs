@@ -327,8 +327,8 @@ pub async fn get_form_stats_anonymous(
     // Get role distribution
     let role_distribution: Vec<RoleCount> = sqlx::query_as(
         r#"
-        SELECT role, COUNT(*) as count 
-        FROM responses 
+        SELECT role, COUNT(*) as count
+        FROM responses
         WHERE form_id = ?
         GROUP BY role
         ORDER BY count DESC
@@ -342,13 +342,13 @@ pub async fn get_form_stats_anonymous(
     // Get question statistics
     let question_stats_raw: Vec<(String, String, i64, Option<f64>)> = sqlx::query_as(
         r#"
-        SELECT 
+        SELECT
             q.id as question_id,
             q.title as question_title,
             COUNT(DISTINCT a.response_id) as response_count,
-            AVG(CASE 
+            AVG(CASE
                 WHEN json_type(a.value) = 'integer' THEN CAST(a.value as REAL)
-                WHEN json_type(a.value) = 'object' AND json_extract(a.value, '$.rating') IS NOT NULL 
+                WHEN json_type(a.value) = 'object' AND json_extract(a.value, '$.rating') IS NOT NULL
                     THEN CAST(json_extract(a.value, '$.rating') as REAL)
                 ELSE NULL
             END) as average_rating
@@ -358,7 +358,7 @@ pub async fn get_form_stats_anonymous(
         WHERE q.form_id = ? AND q.type = 'likert'
         GROUP BY q.id, q.title
         ORDER BY q.position
-        "#
+        "#,
     )
     .bind(&form_id)
     .fetch_all(&state.db)
@@ -371,8 +371,8 @@ pub async fn get_form_stats_anonymous(
         // Get rating distribution for this question
         let rating_dist: Vec<RatingCount> = sqlx::query_as(
             r#"
-            SELECT 
-                CASE 
+            SELECT
+                CASE
                     WHEN json_type(value) = 'integer' THEN CAST(value as INTEGER)
                     WHEN json_type(value) = 'object' THEN CAST(json_extract(value, '$.rating') as INTEGER)
                 END as rating,
@@ -424,7 +424,7 @@ pub async fn get_responses_with_pii(
         String,
     )> = sqlx::query_as(
         r#"
-            SELECT 
+            SELECT
                 r.id,
                 r.form_id,
                 res.name,
@@ -449,7 +449,7 @@ pub async fn get_responses_with_pii(
         // Fetch as raw strings first, then parse JSON
         let answers_raw: Vec<(String, String, String)> = sqlx::query_as(
             r#"
-            SELECT 
+            SELECT
                 a.question_id,
                 q.title,
                 CAST(a.value AS TEXT)
@@ -687,7 +687,7 @@ pub async fn get_admin_responses(
     // Fetch responses WITHOUT PII
     let responses_raw: Vec<(String, String, Option<String>, String)> = sqlx::query_as(
         r#"
-            SELECT 
+            SELECT
                 r.id,
                 r.form_id,
                 r.role,
@@ -708,7 +708,7 @@ pub async fn get_admin_responses(
         // Get answers for this response
         let answers_raw: Vec<(String, String, String)> = sqlx::query_as(
             r#"
-            SELECT 
+            SELECT
                 a.question_id,
                 q.title,
                 CAST(a.value AS TEXT)
@@ -975,8 +975,8 @@ pub async fn update_form(
 
     sqlx::query(
         r#"
-        UPDATE forms 
-        SET title = ?, description = ?, instructions = ?, status = ?, 
+        UPDATE forms
+        SET title = ?, description = ?, instructions = ?, status = ?,
             welcome_message = ?, closing_message = ?, settings = ?, updated_at = ?
         WHERE id = ?
         "#,
@@ -1171,9 +1171,9 @@ pub async fn clone_form(
         // Clone questions for this section
         let questions: Vec<(String, i32, String, String, Option<String>, String)> = sqlx::query_as(
             r#"
-            SELECT id, position, type, title, description, features 
-            FROM questions 
-            WHERE form_id = ? AND section_id = ? 
+            SELECT id, position, type, title, description, features
+            FROM questions
+            WHERE form_id = ? AND section_id = ?
             ORDER BY position
             "#,
         )
@@ -1239,7 +1239,7 @@ pub async fn update_form_status(
     let now = Utc::now();
     let result = sqlx::query(
         r#"
-        UPDATE forms 
+        UPDATE forms
         SET status = ?, updated_at = ?
         WHERE id = ?
         "#,
@@ -1338,8 +1338,9 @@ pub async fn delete_form(
 
 /// Serve the form template JSON file
 pub async fn get_form_template() -> Result<impl IntoResponse, AppError> {
-    let template_path = std::env::var("TEMPLATE_PATH")
-        .unwrap_or_else(|_| "/app/config/form-template.json".to_string());
+    let template_path = std::env::var("TEMPLATE_PATH").map_err(|_| {
+        AppError::InternalError("TEMPLATE_PATH environment variable not set".to_string())
+    })?;
 
     let template_content = tokio::fs::read_to_string(&template_path)
         .await

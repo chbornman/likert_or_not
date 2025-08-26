@@ -37,13 +37,12 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "sqlite://./likert_form.db?mode=rwc".to_string());
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let admin_token = std::env::var("ADMIN_TOKEN").expect("ADMIN_TOKEN must be set");
     let resend_api_key = std::env::var("RESEND_API_KEY").unwrap_or_else(|_| "".to_string());
     let notification_email = std::env::var("NOTIFICATION_EMAIL").unwrap_or_else(|_| "".to_string());
     let port: u16 = std::env::var("PORT")
-        .unwrap_or_else(|_| "3000".to_string())
+        .expect("PORT must be set")
         .parse()
         .expect("PORT must be a valid number");
 

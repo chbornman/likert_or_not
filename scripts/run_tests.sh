@@ -24,18 +24,34 @@ echo -e "\n📊 Running Backend Clippy..."
 cd backend && cargo clippy -- -D warnings && cd ..
 
 if [ "$1" == "--e2e" ]; then
-    echo -e "\n🌐 Starting services for E2E tests..."
-    docker compose up -d
+    echo -e "\n🌐 Starting local services for E2E tests..."
+
+    # Start backend in background
+    echo "Starting backend..."
+    cd backend
+    cargo run &
+    BACKEND_PID=$!
+    cd ..
+
+    # Start frontend in background
+    echo "Starting frontend..."
+    cd frontend
+    bun run dev &
+    FRONTEND_PID=$!
+    cd ..
+
+    # Wait for services to be ready
+    echo "Waiting for services to start..."
     sleep 10
-    
+
     echo -e "\n🎭 Running E2E Tests..."
     cd frontend
     bunx playwright install chromium
     TEST_URL=http://localhost:5173 HEADLESS=true bun test test/e2e
     cd ..
-    
+
     echo -e "\n🛑 Stopping services..."
-    docker compose down
+    kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
 fi
 
 if [ "$1" == "--integration" ]; then

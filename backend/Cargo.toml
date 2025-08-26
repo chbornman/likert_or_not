@@ -31,6 +31,6 @@ uuid = { version = "1.18.0", features = ["v4", "serde"] }
 axum-extra = { version = "0.10.1", features = ["typed-header"] }
 async-trait = "0.1"
 sha2 = "0.10"
+watch = "0.2.3"
 
 [dev-dependencies]
-

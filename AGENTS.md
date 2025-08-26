@@ -18,10 +18,9 @@ cargo test test_name    # Run single test
 cargo clippy -- -D warnings  # Strict linting
 
 # Docker (from project root)
-docker compose up -d    # Start all services
-docker compose build    # Rebuild all
-docker compose logs -f backend  # View logs
-make dev               # Development with Docker
+docker compose -f docker-compose.production.yml up -d    # Start production services
+docker compose -f docker-compose.production.yml build    # Rebuild all
+docker compose -f docker-compose.production.yml logs -f backend  # View logs
 ```
 
 ## Code Style & Conventions

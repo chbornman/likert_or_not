@@ -1,0 +1,61 @@
+# Pre-commit hooks for code quality
+# Install with: pip install pre-commit && pre-commit install
+
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-json
+      - id: check-toml
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Rust formatting and linting
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: Cargo Format
+        entry: bash -c 'cd backend && cargo fmt --all -- --check'
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+      - id: cargo-clippy
+        name: Cargo Clippy
+        entry: bash -c 'cd backend && cargo clippy -- -W clippy::all -A clippy::type-complexity'
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+  # Frontend formatting and linting
+  - repo: local
+    hooks:
+      - id: prettier
+        name: Prettier Format
+        entry: bash -c 'cd frontend && bunx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css,md}"'
+        language: system
+        files: \.(ts|tsx|js|jsx|json|css|md)$
+        pass_filenames: false
+
+      - id: eslint
+        name: ESLint
+        entry: bash -c 'cd frontend && bun run lint'
+        language: system
+        files: \.(ts|tsx|js|jsx)$
+        pass_filenames: false
+
+  # Security checks
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: package-lock.json|bun.lockb|Cargo.lock

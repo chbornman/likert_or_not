@@ -21,7 +21,7 @@ RUN rm -rf src
 
 # Copy actual source code
 COPY backend/src ./src
-COPY migrations ./migrations
+COPY backend/migrations ./migrations
 
 # Touch main.rs to ensure it's newer than the cached deps
 RUN touch src/main.rs
