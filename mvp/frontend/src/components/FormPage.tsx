@@ -6,6 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { FormData, AnswerInput } from '@/types';
+import MultipleChoice from '@/components/MultipleChoice';
+import CheckboxGroup from '@/components/CheckboxGroup';
+import DropdownSelect from '@/components/DropdownSelect';
+import YesNoQuestion from '@/components/YesNoQuestion';
+import RatingScale from '@/components/RatingScale';
+import NumberInput from '@/components/NumberInput';
+import DateTimePicker from '@/components/DateTimePicker';
 
 const likertOptions = [
   { value: 1, label: 'Strongly Disagree', shortLabel: 'Strongly Disagree' },
@@ -15,17 +22,7 @@ const likertOptions = [
   { value: 5, label: 'Strongly Agree', shortLabel: 'Strongly Agree' },
 ];
 
-const questionSections = [
-  { start: 0, end: 4, title: "Organizational Leadership" },
-  { start: 4, end: 8, title: "Strategic Planning & Management" },
-  { start: 8, end: 12, title: "Leadership & Governance" },
-  { start: 12, end: 16, title: "Programming & Operations" },
-  { start: 16, end: 20, title: "Fundraising & Financial Management" },
-  { start: 20, end: 24, title: "Community Engagement & Advocacy" },
-  { start: 24, end: 30, title: "Core Values" },
-  { start: 30, end: 35, title: "Executive Competencies" },
-  { start: 35, end: 40, title: "Overall Performance" },
-];
+// Dynamic sections will be loaded from the form data
 
 export default function FormPage() {
   const navigate = useNavigate();
@@ -36,7 +33,7 @@ export default function FormPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [currentSection, setCurrentSection] = useState(-1); // Start with personal info page
-  const [validationErrors, setValidationErrors] = useState<Set<number>>(new Set());
+  const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set());
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const [showRestoredMessage, setShowRestoredMessage] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -46,7 +43,7 @@ export default function FormPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
-  const [answers, setAnswers] = useState<Map<number, AnswerInput>>(new Map());
+  const [answers, setAnswers] = useState<Map<string, AnswerInput>>(new Map());
 
   // Save to local storage whenever form data changes
   useEffect(() => {
@@ -77,6 +74,7 @@ export default function FormPage() {
         }, 250);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name, email, role, answers, currentSection, loading, formData]);
 
   useEffect(() => {
@@ -99,17 +97,51 @@ export default function FormPage() {
         title: data.title,
         description: data.description,
         instructions: data.instructions,
+        welcome_message: data.welcome_message,
+        closing_message: data.closing_message,
+        sections: data.sections.map((section: any) => ({
+          id: section.id,
+          title: section.title,
+          description: section.description,
+          position: section.position,
+          questions: section.questions.map((q: any) => ({
+            id: q.id, // Use the string ID directly from backend
+            question_text: q.title,
+            question_type: q.type,
+            is_required: q.features?.required === 1 || q.features?.required === true,
+            allow_comment: q.features?.allowComment === 1 || q.features?.allowComment === true,
+            position: q.position,
+            help_text: q.description,
+            placeholder: q.features?.placeholder,
+            rows: q.features?.rows,
+            charLimit: q.features?.charLimit,
+            options: q.features?.options,
+            min: q.features?.min,
+            max: q.features?.max,
+            step: q.features?.step,
+            ratingStyle: q.features?.ratingStyle,
+            dateFormat: q.features?.dateFormat
+          }))
+        })),
+        // Also keep flattened questions for backward compatibility
         questions: data.sections.flatMap((section: any) =>
           section.questions.map((q: any) => ({
-            id: parseInt(q.id.replace('q', '')),
+            id: q.id,
             question_text: q.title,
-            question_type: q.type, // Add question type
-            is_required: q.features.required === 1 || q.features.required === true,
-            allow_comment: q.features.allowComment === 1 || q.features.allowComment === true,
+            question_type: q.type,
+            is_required: q.features?.required === 1 || q.features?.required === true,
+            allow_comment: q.features?.allowComment === 1 || q.features?.allowComment === true,
             position: q.position,
-            placeholder: q.features.placeholder,
-            rows: q.features.rows,
-            charLimit: q.features.charLimit
+            help_text: q.description,
+            placeholder: q.features?.placeholder,
+            rows: q.features?.rows,
+            charLimit: q.features?.charLimit,
+            options: q.features?.options,
+            min: q.features?.min,
+            max: q.features?.max,
+            step: q.features?.step,
+            ratingStyle: q.features?.ratingStyle,
+            dateFormat: q.features?.dateFormat
           }))
         ),
         settings: data.settings
@@ -133,21 +165,42 @@ export default function FormPage() {
             setCurrentSection(parsed.currentSection ?? -1);
 
             // Restore answers
-            const restoredAnswers = new Map<number, AnswerInput>();
+            const restoredAnswers = new Map<string, AnswerInput>();
             transformedData.questions.forEach((q: any) => {
               restoredAnswers.set(q.id, {
                 question_id: q.id,
                 likert_value: q.question_type === 'likert' ? null : undefined,
                 comment: '',
-                text_value: q.question_type !== 'likert' ? '' : undefined,
+                text_value: (q.question_type === 'text' || q.question_type === 'textarea') ? '' : undefined,
+                selected_option: (q.question_type === 'multiple_choice' || q.question_type === 'dropdown' || q.question_type === 'yes_no') ? undefined : undefined,
+                selected_options: q.question_type === 'checkbox' ? [] : undefined,
+                number_value: (q.question_type === 'number' || q.question_type === 'rating') ? undefined : undefined,
+                date_value: q.question_type === 'datetime' ? undefined : undefined,
               });
             });
 
             // Override with saved answers
             if (parsed.answers && Array.isArray(parsed.answers)) {
-              parsed.answers.forEach(([questionId, answer]: [number, AnswerInput]) => {
-                if (restoredAnswers.has(questionId)) {
-                  restoredAnswers.set(questionId, answer);
+              parsed.answers.forEach(([questionId, answer]: [string | number, AnswerInput]) => {
+                // Convert old numeric IDs to string if needed
+                const qId = String(questionId);
+                // Only restore if the question still exists in the form
+                if (restoredAnswers.has(qId)) {
+                  // Make sure we're not mixing up answer types
+                  const question = transformedData.questions.find((q: any) => q.id === qId);
+                  if (question) {
+                    const cleanAnswer = {
+                      question_id: qId,
+                      likert_value: question.question_type === 'likert' ? answer.likert_value : undefined,
+                      comment: (question.question_type === 'likert' || question.question_type === 'rating' || question.question_type === 'multiple_choice' || question.question_type === 'yes_no') && question.allow_comment ? answer.comment || '' : '',
+                      text_value: (question.question_type === 'text' || question.question_type === 'textarea') ? answer.text_value || '' : undefined,
+                      selected_option: (question.question_type === 'multiple_choice' || question.question_type === 'dropdown' || question.question_type === 'yes_no') ? answer.selected_option : undefined,
+                      selected_options: question.question_type === 'checkbox' ? answer.selected_options || [] : undefined,
+                      number_value: (question.question_type === 'number' || question.question_type === 'rating') ? answer.number_value : undefined,
+                      date_value: question.question_type === 'datetime' ? answer.date_value : undefined,
+                    };
+                    restoredAnswers.set(qId, cleanAnswer);
+                  }
                 }
               });
             }
@@ -180,19 +233,23 @@ export default function FormPage() {
   };
 
   const initializeEmptyForm = (data: any) => {
-    const initialAnswers = new Map<number, AnswerInput>();
+    const initialAnswers = new Map<string, AnswerInput>();
     data.questions.forEach((q: any) => {
       initialAnswers.set(q.id, {
         question_id: q.id,
         likert_value: q.question_type === 'likert' ? null : undefined,
-        comment: '',
-        text_value: q.question_type !== 'likert' ? '' : undefined,
+        comment: (q.question_type === 'likert' || q.question_type === 'rating' || q.question_type === 'multiple_choice' || q.question_type === 'yes_no') && q.allow_comment ? '' : '',
+        text_value: (q.question_type === 'text' || q.question_type === 'textarea') ? '' : undefined,
+        selected_option: (q.question_type === 'multiple_choice' || q.question_type === 'dropdown' || q.question_type === 'yes_no') ? undefined : undefined,
+        selected_options: q.question_type === 'checkbox' ? [] : undefined,
+        number_value: (q.question_type === 'number' || q.question_type === 'rating') ? undefined : undefined,
+        date_value: q.question_type === 'datetime' ? undefined : undefined,
       });
     });
     setAnswers(initialAnswers);
   };
 
-  const handleLikertChange = (questionId: number, value: string) => {
+  const handleLikertChange = (questionId: string, value: string) => {
     const current = answers.get(questionId)!;
     const newAnswers = new Map(answers);
     newAnswers.set(questionId, {
@@ -209,26 +266,27 @@ export default function FormPage() {
     }
 
     // Clear the general error message if all required questions in current section are now answered
-    if (error && formData) {
-      const section = questionSections[currentSection];
-      const sectionQuestions = formData.questions.slice(section.start, section.end);
-      const allRequiredAnswered = sectionQuestions
-        .filter(q => q.is_required)
-        .every(q => {
-          if (q.id === questionId) return true; // We just answered this one
-          const answer = answers.get(q.id);
-          return answer && answer.likert_value !== null;
-        });
-
-      if (allRequiredAnswered) {
-        setError('');
+    if (error && formData && formData.sections) {
+      const section = formData.sections[currentSection];
+      if (section) {
+        const sectionQuestions = section.questions;
+        const allRequiredAnswered = sectionQuestions
+          .filter(q => q.is_required)
+          .every(q => {
+            if (q.id === questionId) return true; // We just answered this one
+            const answer = answers.get(q.id);
+            return answer && answer.likert_value !== null;
+          });
+        if (allRequiredAnswered) {
+          setError('');
+        }
       }
     }
   };
 
   const MAX_COMMENT_LENGTH = 500;
 
-  const handleCommentChange = (questionId: number, comment: string) => {
+  const handleCommentChange = (questionId: string, comment: string) => {
     // Limit comment length
     if (comment.length > MAX_COMMENT_LENGTH) {
       return;
@@ -241,7 +299,7 @@ export default function FormPage() {
     })));
   };
 
-  const handleTextChange = (questionId: number, value: string, charLimit?: number) => {
+  const handleTextChange = (questionId: string, value: string, charLimit?: number) => {
     // Apply character limit if specified
     if (charLimit && value.length > charLimit) {
       return;
@@ -264,11 +322,13 @@ export default function FormPage() {
   };
 
   const validateSection = (sectionIndex: number): boolean => {
-    if (!formData) return false;
+    if (!formData || !formData.sections) return false;
 
-    const section = questionSections[sectionIndex];
-    const sectionQuestions = formData.questions.slice(section.start, section.end);
-    const newErrors = new Set<number>();
+    const section = formData.sections[sectionIndex];
+    if (!section) return false;
+    
+    const sectionQuestions = section.questions;
+    const newErrors = new Set<string>();
     let isValid = true;
 
     sectionQuestions.forEach(q => {
@@ -284,6 +344,26 @@ export default function FormPage() {
           }
         } else if (q.question_type === 'text' || q.question_type === 'textarea') {
           if (!answer.text_value || answer.text_value.trim() === '') {
+            newErrors.add(q.id);
+            isValid = false;
+          }
+        } else if (q.question_type === 'multiple_choice' || q.question_type === 'dropdown' || q.question_type === 'yes_no') {
+          if (!answer.selected_option) {
+            newErrors.add(q.id);
+            isValid = false;
+          }
+        } else if (q.question_type === 'checkbox') {
+          if (!answer.selected_options || answer.selected_options.length === 0) {
+            newErrors.add(q.id);
+            isValid = false;
+          }
+        } else if (q.question_type === 'number' || q.question_type === 'rating') {
+          if (answer.number_value === undefined || answer.number_value === null) {
+            newErrors.add(q.id);
+            isValid = false;
+          }
+        } else if (q.question_type === 'datetime') {
+          if (!answer.date_value) {
             newErrors.add(q.id);
             isValid = false;
           }
@@ -345,14 +425,22 @@ export default function FormPage() {
         if (!answer) return true;
 
         // Check based on question type
-        if (q.question_type === 'likert') {
+        if (q.question_type === 'likert' || !q.question_type) {
           return answer.likert_value === null;
         } else if (q.question_type === 'text' || q.question_type === 'textarea') {
           return !answer.text_value || answer.text_value.trim() === '';
+        } else if (q.question_type === 'multiple_choice' || q.question_type === 'dropdown' || q.question_type === 'yes_no') {
+          return !answer.selected_option;
+        } else if (q.question_type === 'checkbox') {
+          return !answer.selected_options || answer.selected_options.length === 0;
+        } else if (q.question_type === 'number' || q.question_type === 'rating') {
+          return answer.number_value === undefined || answer.number_value === null;
+        } else if (q.question_type === 'datetime') {
+          return !answer.date_value;
         }
 
-        // Default to likert for backward compatibility
-        return answer.likert_value === null;
+        // Default to false if unknown type
+        return false;
       });
 
     if (unansweredRequired.length > 0) {
@@ -373,26 +461,65 @@ export default function FormPage() {
           if (!question) return false;
 
           // Include answers based on question type
-          if (question.question_type === 'likert') {
+          if (question.question_type === 'likert' || !question.question_type) {
             return a.likert_value !== null;
           } else if (question.question_type === 'text' || question.question_type === 'textarea') {
             return a.text_value && a.text_value.trim() !== '';
+          } else if (question.question_type === 'multiple_choice' || question.question_type === 'dropdown' || question.question_type === 'yes_no') {
+            return a.selected_option !== undefined;
+          } else if (question.question_type === 'checkbox') {
+            return a.selected_options && a.selected_options.length > 0;
+          } else if (question.question_type === 'number' || question.question_type === 'rating') {
+            return a.number_value !== undefined && a.number_value !== null;
+          } else if (question.question_type === 'datetime') {
+            return a.date_value !== undefined;
           }
-          return a.likert_value !== null; // default
+          return false;
         })
         .map(([qId, a]) => {
           const question = formData.questions.find(q => q.id === qId);
 
           if (question?.question_type === 'text' || question?.question_type === 'textarea') {
             return {
-              question_id: `q${a.question_id}`,
+              question_id: qId,
               value: a.text_value
+            };
+          } else if (question?.question_type === 'multiple_choice' || question?.question_type === 'dropdown' || question?.question_type === 'yes_no') {
+            return {
+              question_id: qId,
+              value: a.comment ? {
+                selection: a.selected_option,
+                comment: a.comment
+              } : a.selected_option
+            };
+          } else if (question?.question_type === 'checkbox') {
+            return {
+              question_id: qId,
+              value: a.selected_options
+            };
+          } else if (question?.question_type === 'number') {
+            return {
+              question_id: qId,
+              value: a.number_value
+            };
+          } else if (question?.question_type === 'rating') {
+            return {
+              question_id: qId,
+              value: a.comment ? {
+                rating: a.number_value,
+                comment: a.comment
+              } : a.number_value
+            };
+          } else if (question?.question_type === 'datetime') {
+            return {
+              question_id: qId,
+              value: a.date_value
             };
           }
 
-          // Likert question
+          // Likert question (default)
           return {
-            question_id: `q${a.question_id}`,
+            question_id: qId,
             value: a.comment ? {
               rating: a.likert_value,
               comment: a.comment
@@ -419,6 +546,10 @@ export default function FormPage() {
 
       // Clear saved progress after successful submission
       localStorage.removeItem(STORAGE_KEY);
+      // Store closing message for success page
+      if (formData.closing_message) {
+        sessionStorage.setItem('form_closing_message', formData.closing_message);
+      }
       navigate('/success');
     } catch (err) {
       setError('Failed to submit form. Please try again.');
@@ -434,27 +565,44 @@ export default function FormPage() {
 
   const clearSavedProgress = () => {
     localStorage.removeItem(STORAGE_KEY);
-    setName('');
-    setEmail('');
-    setCurrentSection(-1);
-    setTouchedFields(new Set());
-    setValidationErrors(new Set());
     setShowRestoredMessage(false);
+    // Reset form to clean state
     if (formData) {
       initializeEmptyForm(formData);
+      setName('');
+      setEmail('');
+      setRole('');
+      setCurrentSection(-1);
     }
   };
 
   // Check which sections have incomplete required questions
   const getSectionCompletionStatus = (sectionIndex: number): boolean => {
-    if (!formData) return false;
-    const section = questionSections[sectionIndex];
-    const sectionQuestions = formData.questions.slice(section.start, section.end);
-    return sectionQuestions
+    if (!formData || !formData.sections) return false;
+    const section = formData.sections[sectionIndex];
+    if (!section) return false;
+    
+    return section.questions
       .filter(q => q.is_required)
       .every(q => {
         const answer = answers.get(q.id);
-        return answer && answer.likert_value !== null;
+        if (!answer) return false;
+        
+        // Check based on question type
+        if (q.question_type === 'likert' || !q.question_type) {
+          return answer.likert_value !== null;
+        } else if (q.question_type === 'text' || q.question_type === 'textarea') {
+          return answer.text_value && answer.text_value.trim() !== '';
+        } else if (q.question_type === 'multiple_choice' || q.question_type === 'dropdown' || q.question_type === 'yes_no') {
+          return !!answer.selected_option;
+        } else if (q.question_type === 'checkbox') {
+          return answer.selected_options && answer.selected_options.length > 0;
+        } else if (q.question_type === 'number' || q.question_type === 'rating') {
+          return answer.number_value !== undefined && answer.number_value !== null;
+        } else if (q.question_type === 'datetime') {
+          return !!answer.date_value;
+        }
+        return false;
       });
   };
 
@@ -474,7 +622,7 @@ export default function FormPage() {
     );
   }
 
-  const totalSections = questionSections.length;
+  const totalSections = formData?.sections?.length || 0;
   const progressPercentage = currentSection === -1 ? 0 : ((currentSection + 1) / (totalSections + 1)) * 100;
 
   return (
@@ -509,8 +657,11 @@ export default function FormPage() {
           </div>
         )}
         <div className="mb-4 sm:mb-6 px-4 sm:px-0">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-col gap-2 mb-4">
             <h1 className="text-2xl sm:text-3xl font-bold text-gunmetal">{formData.title}</h1>
+            {formData.description && (
+              <p className="text-sm sm:text-base text-gunmetal/70">{formData.description}</p>
+            )}
             <div className="flex items-center gap-4">
               {(isSaving || lastSaved) && (
                 <span className={`text-xs text-gunmetal/50 flex items-center gap-1 transition-all duration-300 ${isSaving ? 'opacity-100' : 'opacity-70'
@@ -534,7 +685,7 @@ export default function FormPage() {
                 </span>
               )}
               <span className="text-sm text-gunmetal/70">
-                {currentSection === -1 ? 'Personal Information' : `Section ${currentSection + 1} of ${totalSections}`}
+                {currentSection === -1 ? 'Personal Information' : formData?.sections?.[currentSection] ? `Section ${currentSection + 1} of ${totalSections}` : ''}
               </span>
             </div>
           </div>
@@ -549,18 +700,35 @@ export default function FormPage() {
         <Card className="shadow-none sm:shadow-xl border-0 bg-white sm:bg-white/95 backdrop-blur rounded-none sm:rounded-lg">
           <CardHeader className="bg-gradient-to-r from-cerulean to-cambridge-blue text-white rounded-none sm:rounded-t-lg px-4 sm:px-6">
             <CardTitle className="text-xl sm:text-2xl">
-              {currentSection === -1 ? 'Personal Information' : questionSections[currentSection].title}
+              {currentSection === -1 ? 'Personal Information' : formData?.sections?.[currentSection]?.title || ''}
             </CardTitle>
             <CardDescription className="text-cream/90 mt-2 text-sm sm:text-base">
               {currentSection === -1
                 ? 'Please provide your contact information to begin the evaluation.'
-                : `Answer all questions in this section. Required questions are marked with a red asterisk (*).`}
+                : formData?.sections?.[currentSection]?.description || `Answer all questions in this section. Required questions are marked with a red asterisk (*).`}
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6 sm:pt-8 px-3 sm:px-6">
             {currentSection === -1 ? (
               <div className="space-y-6">
-                {/* Privacy notice - moved to top */}
+                {/* Welcome message */}
+                {formData.welcome_message && (
+                  <div className="bg-gradient-to-r from-cerulean/10 to-cambridge-blue/10 rounded-lg p-4 border border-cambridge-blue/20">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-cerulean mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                      </svg>
+                      <div>
+                        <h3 className="font-semibold text-gunmetal text-sm mb-2">Welcome</h3>
+                        <p className="text-gunmetal/70 text-sm whitespace-pre-wrap">
+                          {formData.welcome_message}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Privacy notice with confidentiality info */}
                 <div className="bg-cream/40 rounded-lg p-4 border border-cambridge-blue/20">
                   <div className="flex items-start gap-3">
                     <svg className="w-5 h-5 text-cerulean mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -569,17 +737,18 @@ export default function FormPage() {
                     <div>
                       <h3 className="font-semibold text-gunmetal text-sm mb-2">Privacy Notice</h3>
                       <p className="text-gunmetal/70 text-xs">
-                        Your name and email are collected for verification purposes only to prevent duplicate submissions. 
-                        Your form responses are separated from your identity and aggregated by role (Staff, Board, etc.) 
-                        to ensure complete anonymity. Individual responses cannot be traced back to you and will not be 
-                        shared with the person being evaluated.
+                        {formData.settings?.confidentialityNotice || 
+                          `Your name and email are collected for verification purposes only to prevent duplicate submissions. 
+                          Your form responses are separated from your identity and aggregated by role (Staff, Board, etc.) 
+                          to ensure complete anonymity. Individual responses cannot be traced back to you and will not be 
+                          shared with the person being evaluated.`}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Instructions section */}
-                {formData.instructions && (
+                {/* Instructions section with review period */}
+                {(formData.instructions || formData.settings?.reviewPeriod) && (
                   <div className="bg-gradient-to-r from-cerulean/10 to-cambridge-blue/10 rounded-lg p-4 border border-cambridge-blue/20">
                     <div className="flex items-start gap-3">
                       <svg className="w-5 h-5 text-cerulean mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -587,9 +756,16 @@ export default function FormPage() {
                       </svg>
                       <div>
                         <h3 className="font-semibold text-gunmetal text-sm mb-2">Instructions</h3>
-                        <p className="text-gunmetal/70 text-sm whitespace-pre-wrap">
-                          {formData.instructions}
-                        </p>
+                        {formData.settings?.reviewPeriod && (
+                          <p className="text-gunmetal/70 text-sm mb-2">
+                            <strong>Review Period:</strong> {formData.settings.reviewPeriod}
+                          </p>
+                        )}
+                        {formData.instructions && (
+                          <p className="text-gunmetal/70 text-sm whitespace-pre-wrap">
+                            {formData.instructions}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -604,7 +780,7 @@ export default function FormPage() {
                     <div>
                       <h3 className="font-semibold text-gunmetal text-sm">Estimated Time to Complete</h3>
                       <p className="text-gunmetal/70 text-sm mt-1">
-                        Approximately {Math.ceil((formData.questions.length * 30) / 60)} minutes
+                        {formData.settings?.estimatedTime || `Approximately ${Math.ceil((formData.questions.length * 30) / 60)} minutes`}
                         <span className="text-xs ml-2 text-gunmetal/50">
                           ({formData.questions.length} questions)
                         </span>
@@ -712,28 +888,32 @@ export default function FormPage() {
               </div>
             ) : (
               <div className="space-y-6">
-                {formData.questions.slice(
-                  questionSections[currentSection].start,
-                  questionSections[currentSection].end
-                ).map((question, idx) => (
+                {formData.sections?.[currentSection]?.questions?.map((question: any, idx: number) => (
                   <div
-                    key={question.id}
+                    key={`question-${currentSection}-${idx}-${question.id}`}
                     className={`p-3 sm:p-5 rounded-lg sm:rounded-xl transition-all ${validationErrors.has(question.id)
                       ? 'bg-rose-quartz/10 border-2 border-rose-quartz shadow-lg shadow-rose-quartz/20'
                       : 'bg-gradient-to-r from-cream/30 to-cambridge-blue/10 border border-cambridge-blue/20'
                       }`}
                   >
                     <div className="space-y-3 sm:space-y-4">
-                      {/* Question text with number */}
-                      <div className="flex items-start gap-2 sm:gap-3">
-                        <span className="text-xs sm:text-sm font-bold text-white bg-cerulean rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          {questionSections[currentSection].start + idx + 1}
-                        </span>
-                        <Label className="text-sm sm:text-base text-gunmetal leading-relaxed">
-                          {question.question_text}
-                          {question.is_required && <span className="text-rose-quartz ml-1 font-bold">*</span>}
-                        </Label>
-                      </div>
+                      {/* Question text with number - only show for basic types */}
+                      {(!question.question_type || question.question_type === 'likert' || question.question_type === 'text' || question.question_type === 'textarea') && (
+                        <div className="flex items-start gap-2 sm:gap-3">
+                          <span className="text-xs sm:text-sm font-bold text-white bg-cerulean rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            {idx + 1}
+                          </span>
+                          <div className="flex-1">
+                            <Label className="text-sm sm:text-base text-gunmetal leading-relaxed">
+                              {question.question_text}
+                              {question.is_required && <span className="text-rose-quartz ml-1 font-bold">*</span>}
+                            </Label>
+                            {question.help_text && (
+                              <p className="text-xs text-gunmetal/60 mt-1">{question.help_text}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       {validationErrors.has(question.id) && (
                         <div className="text-rose-quartz text-sm font-medium bg-rose-quartz/20 px-3 py-1 rounded-md inline-block mx-auto">
@@ -776,6 +956,163 @@ export default function FormPage() {
                             </span>
                           )}
                         </div>
+                      ) : (question.question_type === 'multiple_choice') ? (
+                        /* Multiple choice question */
+                        <MultipleChoice
+                          questionId={question.id}
+                          question={question.question_text}
+                          options={question.options || []}
+                          value={answers.get(question.id)?.selected_option || ''}
+                          comment={answers.get(question.id)?.comment || ''}
+                          allowComment={question.allow_comment}
+                          isRequired={question.is_required}
+                          onChange={(value) => {
+                            const newAnswers = new Map(answers);
+                            const current = newAnswers.get(question.id) || { question_id: question.id, comment: '' };
+                            newAnswers.set(question.id, { ...current, selected_option: value });
+                            setAnswers(newAnswers);
+                            if (validationErrors.has(question.id)) {
+                              const newErrors = new Set(validationErrors);
+                              newErrors.delete(question.id);
+                              setValidationErrors(newErrors);
+                            }
+                          }}
+                          onCommentChange={(comment) => handleCommentChange(question.id, comment)}
+                        />
+                      ) : (question.question_type === 'checkbox') ? (
+                        /* Checkbox group question */
+                        <CheckboxGroup
+                          questionId={question.id}
+                          question={question.question_text}
+                          options={question.options || []}
+                          value={answers.get(question.id)?.selected_options || []}
+                          comment={answers.get(question.id)?.comment || ''}
+                          allowComment={question.allow_comment}
+                          isRequired={question.is_required}
+                          onChange={(values) => {
+                            const newAnswers = new Map(answers);
+                            const current = newAnswers.get(question.id) || { question_id: question.id, comment: '' };
+                            newAnswers.set(question.id, { ...current, selected_options: values });
+                            setAnswers(newAnswers);
+                            if (values.length > 0 && validationErrors.has(question.id)) {
+                              const newErrors = new Set(validationErrors);
+                              newErrors.delete(question.id);
+                              setValidationErrors(newErrors);
+                            }
+                          }}
+                          onCommentChange={(comment) => handleCommentChange(question.id, comment)}
+                        />
+                      ) : (question.question_type === 'dropdown') ? (
+                        /* Dropdown select question */
+                        <DropdownSelect
+                          questionId={question.id}
+                          question={question.question_text}
+                          options={question.options || []}
+                          value={answers.get(question.id)?.selected_option || ''}
+                          isRequired={question.is_required}
+                          onChange={(value) => {
+                            const newAnswers = new Map(answers);
+                            const current = newAnswers.get(question.id) || { question_id: question.id, comment: '' };
+                            newAnswers.set(question.id, { ...current, selected_option: value });
+                            setAnswers(newAnswers);
+                            if (validationErrors.has(question.id)) {
+                              const newErrors = new Set(validationErrors);
+                              newErrors.delete(question.id);
+                              setValidationErrors(newErrors);
+                            }
+                          }}
+                          placeholder={question.placeholder}
+                        />
+                      ) : (question.question_type === 'yes_no') ? (
+                        /* Yes/No question */
+                        <YesNoQuestion
+                          questionId={question.id}
+                          question={question.question_text}
+                          value={answers.get(question.id)?.selected_option || ''}
+                          comment={answers.get(question.id)?.comment || ''}
+                          allowComment={question.allow_comment}
+                          isRequired={question.is_required}
+                          onChange={(value) => {
+                            const newAnswers = new Map(answers);
+                            const current = newAnswers.get(question.id) || { question_id: question.id, comment: '' };
+                            newAnswers.set(question.id, { ...current, selected_option: value });
+                            setAnswers(newAnswers);
+                            if (validationErrors.has(question.id)) {
+                              const newErrors = new Set(validationErrors);
+                              newErrors.delete(question.id);
+                              setValidationErrors(newErrors);
+                            }
+                          }}
+                          onCommentChange={(comment) => handleCommentChange(question.id, comment)}
+                        />
+                      ) : (question.question_type === 'rating') ? (
+                        /* Rating scale question */
+                        <RatingScale
+                          questionId={question.id}
+                          question={question.question_text}
+                          value={answers.get(question.id)?.number_value}
+                          comment={answers.get(question.id)?.comment || ''}
+                          allowComment={question.allow_comment}
+                          isRequired={question.is_required}
+                          min={question.min || 1}
+                          max={question.max || 5}
+                          ratingStyle={question.ratingStyle || 'stars'}
+                          onChange={(value) => {
+                            const newAnswers = new Map(answers);
+                            const current = newAnswers.get(question.id) || { question_id: question.id, comment: '' };
+                            newAnswers.set(question.id, { ...current, number_value: value });
+                            setAnswers(newAnswers);
+                            if (validationErrors.has(question.id)) {
+                              const newErrors = new Set(validationErrors);
+                              newErrors.delete(question.id);
+                              setValidationErrors(newErrors);
+                            }
+                          }}
+                          onCommentChange={(comment) => handleCommentChange(question.id, comment)}
+                        />
+                      ) : (question.question_type === 'number') ? (
+                        /* Number input question */
+                        <NumberInput
+                          questionId={question.id}
+                          question={question.question_text}
+                          value={answers.get(question.id)?.number_value}
+                          isRequired={question.is_required}
+                          onChange={(value) => {
+                            const newAnswers = new Map(answers);
+                            const current = newAnswers.get(question.id) || { question_id: question.id, comment: '' };
+                            newAnswers.set(question.id, { ...current, number_value: value });
+                            setAnswers(newAnswers);
+                            if (value !== undefined && value !== null && validationErrors.has(question.id)) {
+                              const newErrors = new Set(validationErrors);
+                              newErrors.delete(question.id);
+                              setValidationErrors(newErrors);
+                            }
+                          }}
+                          min={question.min}
+                          max={question.max}
+                          step={question.step}
+                          placeholder={question.placeholder}
+                        />
+                      ) : (question.question_type === 'datetime') ? (
+                        /* Date/Time picker question */
+                        <DateTimePicker
+                          questionId={question.id}
+                          question={question.question_text}
+                          value={answers.get(question.id)?.date_value || ''}
+                          isRequired={question.is_required}
+                          type="datetime"
+                          onChange={(value) => {
+                            const newAnswers = new Map(answers);
+                            const current = newAnswers.get(question.id) || { question_id: question.id, comment: '' };
+                            newAnswers.set(question.id, { ...current, date_value: value });
+                            setAnswers(newAnswers);
+                            if (validationErrors.has(question.id)) {
+                              const newErrors = new Set(validationErrors);
+                              newErrors.delete(question.id);
+                              setValidationErrors(newErrors);
+                            }
+                          }}
+                        />
                       ) : (
                         /* Likert scale buttons - default */
                         <div className="flex justify-center w-full">
@@ -938,15 +1275,14 @@ export default function FormPage() {
 
               <div className="flex-1" />
 
-              {currentSection < questionSections.length - 1 ? (
+              {currentSection < totalSections - 1 ? (
                 <Button
-                  type="button"
                   onClick={handleNextSection}
-                  className="bg-gradient-to-r from-cerulean to-cambridge-blue hover:from-cerulean/90 hover:to-cambridge-blue/90 text-white font-semibold px-6 py-3 rounded-lg transition-all shadow-lg"
+                  className="bg-gradient-to-r from-cerulean to-cambridge-blue hover:from-cerulean/90 hover:to-cambridge-blue/90 text-white px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-base font-medium"
                 >
                   Next Section →
                 </Button>
-              ) : currentSection === questionSections.length - 1 ? (
+              ) : currentSection === totalSections - 1 ? (
                 <Button
                   type="button"
                   onClick={handleSubmit}
@@ -984,14 +1320,14 @@ export default function FormPage() {
                   }
                 }}
                 disabled={sectionIdx > currentSection}
-                className={`relative rounded-full transition-all ${sectionIdx === currentSection
-                  ? 'w-3 h-3 bg-gunmetal'
-                  : sectionIdx < currentSection
-                    ? `w-3 h-3 cursor-pointer hover:scale-110 ${isComplete ? 'bg-cerulean' : 'bg-rose-quartz/30 animate-pulse'
-                    }`
-                    : 'w-2 h-2 bg-rose-quartz/30'
-                  }`}
-                aria-label={`Go to ${sectionIdx === -1 ? 'Personal Information' : questionSections[sectionIdx]?.title || ''}`}
+                className={`relative rounded-full transition-all ${
+                  sectionIdx === currentSection
+                    ? 'w-3 h-3 bg-gunmetal'
+                    : sectionIdx < currentSection
+                      ? 'w-3 h-3 cursor-pointer hover:scale-110 ' + (isComplete ? 'bg-cerulean' : 'bg-rose-quartz/30 animate-pulse')
+                      : 'w-2 h-2 bg-rose-quartz/30'
+                }`}
+                aria-label={`Go to ${sectionIdx === -1 ? 'Personal Information' : formData?.sections?.[sectionIdx]?.title || ''}`}
                 title={
                   sectionIdx < currentSection && !isComplete
                     ? 'This section has incomplete required questions'

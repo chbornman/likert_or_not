@@ -1,10 +1,11 @@
 export interface Question {
-  id: number;
+  id: string;
   question_text: string;
   question_type?: 'likert' | 'text' | 'textarea' | 'multiple_choice' | 'checkbox' | 'dropdown' | 'yes_no' | 'rating' | 'number' | 'date' | 'time' | 'datetime';
   is_required: boolean;
   allow_comment: boolean;
   position: number;
+  help_text?: string;
   placeholder?: string;
   rows?: number;
   charLimit?: number;
@@ -16,16 +17,33 @@ export interface Question {
   dateFormat?: string; // For date/time types
 }
 
+export interface Section {
+  id: string;
+  title: string;
+  description?: string;
+  position: number;
+  questions: Question[];
+}
+
 export interface FormData {
   title: string;
-  description: string;
+  description?: string;
   instructions?: string;
-  questions: Question[];
-  settings?: any;
+  welcome_message?: string;
+  closing_message?: string;
+  sections: Section[];
+  questions: Question[]; // Flattened for backward compatibility
+  settings?: {
+    estimatedTime?: string;
+    confidentialityNotice?: string;
+    reviewPeriod?: string;
+    allowAnonymous?: boolean;
+    requireEmail?: boolean;
+  };
 }
 
 export interface AnswerInput {
-  question_id: number;
+  question_id: string;
   likert_value?: number | null;
   comment: string;
   text_value?: string;

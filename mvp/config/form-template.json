@@ -1,58 +1,252 @@
 {
-  "$schema": "./form-schema.json",
-  "id": "example-form-id",
-  "title": "Example Form Title",
-  "description": "A brief description of what this form is for",
-  "status": "published",
-  "welcome_message": "Welcome message shown at the start of the form",
-  "closing_message": "Thank you message shown after completion",
+  "// Form Metadata": "===========================================",
+  "// id": "Unique identifier for the form (required, lowercase with hyphens)",
+  "// title": "Display title shown to users (required)",
+  "// description": "Brief description of the form's purpose (optional)",
+  "// instructions": "Initial instructions shown at the beginning of form (optional)",
+  "// status": "Form status: 'draft', 'published', or 'archived' (required)",
+  "// welcome_message": "Message shown when starting the form (optional)",
+  "// closing_message": "Message shown after form submission (optional)",
+  
+  "id": "example-comprehensive-form",
+  "title": "Comprehensive Form Template - All Question Types",
+  "description": "This template demonstrates all available question types with configuration options",
+  "instructions": "This form showcases every question type available in the system.\n\nPlease review each question type and its configuration options.\n\nNote: This is a template for demonstration purposes.",
+  "status": "draft",
+  "welcome_message": "Welcome! This form demonstrates all available question types.",
+  "closing_message": "Thank you for reviewing this comprehensive template!",
+  
+  "// Settings": "Optional form-wide settings",
+  "settings": {
+    "allowAnonymous": false,
+    "requireEmail": true,
+    "estimatedTime": "15-20 minutes",
+    "confidentialityNotice": "Your responses are confidential and will be aggregated.",
+    "reviewPeriod": "Q1 2025"
+  },
+  
+  "// Sections": "Forms are organized into sections, each containing questions",
   "sections": [
     {
-      "id": "section-1",
-      "title": "Section Title",
-      "description": "Optional section description",
+      "// Section Fields": "===========================================",
+      "// id": "Unique identifier for the section (required)",
+      "// title": "Section heading (required)",
+      "// description": "Optional description shown under section title",
+      "// position": "Display order, starting from 1 (required)",
+      
+      "id": "rating-questions",
+      "title": "Rating Questions",
+      "description": "Questions that collect ratings or scale-based responses",
       "position": 1,
       "questions": [
         {
-          "id": "q1",
-          "title": "Example Likert scale question",
+          "// Question Fields": "===========================================",
+          "// id": "Unique identifier for the question (required)",
+          "// title": "The question text shown to users (required)",
+          "// question_type": "Type of input control (required)",
+          "// is_required": "Whether the question must be answered (boolean)",
+          "// position": "Display order within the section (required)",
+          "// help_text": "Additional guidance shown below the question (optional)",
+          
+          "id": "likert-example",
+          "title": "The organization effectively achieves its goals",
           "question_type": "likert",
           "is_required": true,
           "position": 1,
-          "help_text": "Optional help text for this question"
+          "help_text": "Likert scale: 5-point agreement scale (Strongly Disagree to Strongly Agree)",
+          "// Note": "Likert scales are fixed 1-5 with predefined labels"
         },
         {
-          "id": "q2",
-          "title": "Example text input question",
-          "question_type": "text",
-          "is_required": false,
+          "id": "rating-stars-example",
+          "title": "Rate your overall satisfaction with the service",
+          "question_type": "rating",
+          "is_required": true,
           "position": 2,
-          "help_text": "Users can enter free-form text here"
+          "help_text": "Star rating: Visual star-based rating system",
+          "// Features": "Rating-specific configuration",
+          "features": {
+            "min": 1,
+            "max": 5,
+            "ratingStyle": "stars"
+          }
         },
         {
-          "id": "q3",
-          "title": "Example long text question",
-          "question_type": "textarea",
+          "id": "rating-numbers-example",
+          "title": "On a scale of 1-10, how likely are you to recommend us?",
+          "question_type": "rating",
           "is_required": false,
           "position": 3,
-          "help_text": "For longer responses"
+          "help_text": "Numeric rating: Number-based rating scale",
+          "features": {
+            "min": 1,
+            "max": 10,
+            "ratingStyle": "numbers"
+          }
         }
       ]
     },
     {
-      "id": "section-2",
-      "title": "Another Section",
-      "description": "You can have multiple sections",
+      "id": "text-input-questions",
+      "title": "Text Input Questions",
+      "description": "Questions that collect text responses of various lengths",
       "position": 2,
       "questions": [
         {
-          "id": "q4",
-          "title": "Another Likert question",
-          "question_type": "likert",
+          "id": "text-short-example",
+          "title": "What is your job title?",
+          "question_type": "text",
           "is_required": true,
-          "position": 1
+          "position": 1,
+          "help_text": "Single-line text input for short responses",
+          "// Features": "Text input configuration options",
+          "features": {
+            "placeholder": "e.g., Senior Software Engineer",
+            "charLimit": 100
+          }
+        },
+        {
+          "id": "textarea-example",
+          "title": "Describe your main responsibilities",
+          "question_type": "textarea",
+          "is_required": false,
+          "position": 2,
+          "help_text": "Multi-line text area for longer responses",
+          "features": {
+            "placeholder": "Please provide a detailed description...",
+            "rows": 5,
+            "charLimit": 500
+          }
+        }
+      ]
+    },
+    {
+      "id": "selection-questions",
+      "title": "Selection Questions",
+      "description": "Questions where users select from predefined options",
+      "position": 3,
+      "questions": [
+        {
+          "id": "multiple-choice-example",
+          "title": "What is your primary work location?",
+          "question_type": "multiple_choice",
+          "is_required": true,
+          "position": 1,
+          "help_text": "Radio buttons: Select one option from the list",
+          "// Features": "Options must be provided as an array",
+          "features": {
+            "options": ["Remote", "Office", "Hybrid", "Field/Travel"],
+            "allowComment": true
+          }
+        },
+        {
+          "id": "checkbox-example",
+          "title": "Which benefits are most important to you? (Select all that apply)",
+          "question_type": "checkbox",
+          "is_required": false,
+          "position": 2,
+          "help_text": "Checkboxes: Select multiple options",
+          "features": {
+            "options": [
+              "Health Insurance",
+              "Retirement Plan",
+              "Flexible Hours",
+              "Remote Work",
+              "Professional Development",
+              "Wellness Programs"
+            ],
+            "allowComment": true
+          }
+        },
+        {
+          "id": "dropdown-example",
+          "title": "Select your department",
+          "question_type": "dropdown",
+          "is_required": true,
+          "position": 3,
+          "help_text": "Dropdown menu: Select one option from a dropdown list",
+          "features": {
+            "placeholder": "Choose a department...",
+            "options": [
+              "Engineering",
+              "Product Management",
+              "Design",
+              "Marketing",
+              "Sales",
+              "Customer Success",
+              "Human Resources",
+              "Finance",
+              "Operations"
+            ]
+          }
+        },
+        {
+          "id": "yes-no-example",
+          "title": "Do you have direct reports?",
+          "question_type": "yes_no",
+          "is_required": true,
+          "position": 4,
+          "help_text": "Yes/No question: Simple binary choice",
+          "features": {
+            "allowComment": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "numeric-datetime-questions",
+      "title": "Numeric and Date/Time Questions",
+      "description": "Questions that collect numbers or dates",
+      "position": 4,
+      "questions": [
+        {
+          "id": "number-example",
+          "title": "How many years of experience do you have in your field?",
+          "question_type": "number",
+          "is_required": true,
+          "position": 1,
+          "help_text": "Number input: Accepts numeric values only",
+          "// Features": "Number-specific configuration",
+          "features": {
+            "min": 0,
+            "max": 50,
+            "step": 0.5,
+            "placeholder": "Enter years of experience"
+          }
+        },
+        {
+          "id": "datetime-example",
+          "title": "When would you prefer to schedule your review meeting?",
+          "question_type": "datetime",
+          "is_required": false,
+          "position": 2,
+          "help_text": "Date and time picker: Select both date and time",
+          "features": {
+            "dateFormat": "YYYY-MM-DD HH:mm"
+          }
         }
       ]
     }
+  ],
+  
+  "// Additional Notes": "===========================================",
+  "// Feature Flags": {
+    "// allowComment": "Adds optional comment field to rating/selection questions",
+    "// required": "Makes the question mandatory (same as is_required)",
+    "// placeholder": "Hint text shown in empty inputs",
+    "// charLimit": "Maximum character count for text inputs",
+    "// rows": "Number of visible rows for textarea",
+    "// options": "Array of choices for selection questions",
+    "// min/max": "Range limits for number and rating questions",
+    "// step": "Increment value for number inputs",
+    "// ratingStyle": "'stars' or 'numbers' for rating questions",
+    "// dateFormat": "Display format for date/time values"
+  },
+  
+  "// Import Instructions": [
+    "1. Modify this template with your specific questions",
+    "2. Ensure all question IDs are unique within the form",
+    "3. Set appropriate status ('draft' to start, 'published' when ready)",
+    "4. Import via Admin Dashboard using the 'Import Form' button",
+    "5. Test the form before publishing to users"
   ]
 }

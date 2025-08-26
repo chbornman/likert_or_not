@@ -478,6 +478,7 @@ pub struct ImportQuestion {
     pub allow_comment: bool,
     pub help_text: Option<String>,
     pub position: i32,
+    pub features: Option<JsonValue>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -519,6 +520,7 @@ pub struct UpdateQuestion {
     #[serde(rename = "charLimit")]
     pub char_limit: Option<i32>,
     pub rows: Option<i32>,
+    pub features: Option<JsonValue>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -679,10 +681,21 @@ pub async fn import_form(
         // Insert questions for this section
         for question in section.questions {
             global_question_position += 1;
-            let features = json!({
-                "required": question.is_required,
-                "helpText": question.help_text,
-            });
+            
+            // Start with features from the template if provided
+            let mut features = if let Some(template_features) = question.features {
+                template_features
+            } else {
+                json!({})
+            };
+            
+            // Add/override with explicit fields
+            features["required"] = json!(question.is_required);
+            features["helpText"] = json!(question.help_text);
+            // Only override allowComment if it's not already in features
+            if !features.get("allowComment").is_some() {
+                features["allowComment"] = json!(question.allow_comment);
+            }
 
             sqlx::query(
                 r#"
@@ -796,12 +809,22 @@ pub async fn update_form(
         // Insert questions for this section
         for question in section.questions {
             global_question_position += 1;
-            let mut features = json!({
-                "required": question.is_required,
-            });
+            
+            // Start with features from the request if provided
+            let mut features = if let Some(template_features) = question.features {
+                template_features
+            } else {
+                json!({})
+            };
+            
+            // Add/override with explicit fields
+            features["required"] = json!(question.is_required);
             
             if let Some(allow_comment) = question.allow_comment {
                 features["allowComment"] = json!(allow_comment);
+            }
+            if let Some(help_text) = &question.help_text {
+                features["helpText"] = json!(help_text);
             }
             if let Some(placeholder) = &question.placeholder {
                 features["placeholder"] = json!(placeholder);

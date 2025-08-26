@@ -6,20 +6,23 @@ import { ChevronLeft, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface Response {
-  id: number;
+  id: string;
   form_id: string;
-  respondent_info: any;
-  answers: any;
+  respondent_name?: string;
+  respondent_email?: string;
+  role?: string;
+  answers: any; // Will be transformed to object keyed by question_id
   submitted_at: string;
-  completed: boolean;
+  completed?: boolean; // Computed field
 }
 
 interface Question {
-  id: number;
-  form_id: string;
-  section_id: string;
+  id: number | string;
+  form_id?: string;
+  section_id?: string;
   position: number;
-  question_type: string;
+  question_type?: string;
+  type?: string;
   title: string;
   description?: string;
   features: any;
@@ -50,6 +53,8 @@ export default function FormResults() {
   const [responses, setResponses] = useState<Response[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedRole, setSelectedRole] = useState<string>('all');
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
 
   useEffect(() => {
     if (!token) {
@@ -57,6 +62,7 @@ export default function FormResults() {
       return;
     }
     fetchFormData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formId, token]);
 
   const fetchFormData = async () => {
@@ -96,6 +102,10 @@ export default function FormResults() {
         });
       }
       
+      console.log('Form data received:', formData);
+      console.log('Sections extracted:', allSections);
+      console.log('Questions extracted:', allQuestions);
+      
       setSections(allSections.sort((a, b) => a.position - b.position));
       setQuestions(allQuestions.sort((a, b) => a.position - b.position));
 
@@ -109,7 +119,39 @@ export default function FormResults() {
         throw new Error('Failed to load responses');
       }
       const responsesData = await responsesRes.json();
-      setResponses(responsesData);
+      
+      // Transform responses to have answers as an object keyed by question_id
+      // and determine if response is completed based on whether all questions are answered
+      const transformedResponses = responsesData.map((r: any) => {
+        const answersObj: any = {};
+        r.answers.forEach((a: any) => {
+          answersObj[a.question_id] = {
+            value: a.value,
+            // Handle different answer types
+            likert_value: typeof a.value === 'number' ? a.value : undefined,
+            text_value: typeof a.value === 'string' ? a.value : undefined,
+            comment: a.comment
+          };
+        });
+        
+        // A response is completed when it has been submitted (all submitted responses are complete)
+        const completed = true;
+        
+        return {
+          ...r,
+          answers: answersObj,
+          completed
+        };
+      });
+      
+      setResponses(transformedResponses);
+      
+      // Extract unique roles from responses
+      const rolesList: string[] = transformedResponses
+        .map((r: any) => r.role as string | undefined)
+        .filter((role: string | undefined): role is string => !!role && role.trim() !== '');
+      const uniqueRoles: string[] = Array.from(new Set<string>(rolesList));
+      setAvailableRoles(uniqueRoles.sort());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
@@ -118,7 +160,7 @@ export default function FormResults() {
   };
 
   const exportToExcel = () => {
-    if (responses.length === 0) return;
+    if (filteredResponses.length === 0) return;
 
     // Create a new workbook
     const wb = XLSX.utils.book_new();
@@ -132,12 +174,15 @@ export default function FormResults() {
     summaryData.push(['Form Title:', form?.title || '']);
     summaryData.push(['Description:', form?.description || '']);
     summaryData.push(['Generated:', new Date().toLocaleString()]);
+    if (selectedRole !== 'all') {
+      summaryData.push(['Filtered by Role:', selectedRole]);
+    }
     summaryData.push(['']);
     summaryData.push(['Response Statistics']);
-    summaryData.push(['Total Responses:', responses.length]);
-    summaryData.push(['Completed:', responses.filter(r => r.completed).length]);
-    summaryData.push(['In Progress:', responses.filter(r => !r.completed).length]);
-    summaryData.push(['Completion Rate:', `${responses.length > 0 ? Math.round((responses.filter(r => r.completed).length / responses.length) * 100) : 0}%`]);
+    summaryData.push(['Total Responses:', filteredResponses.length]);
+    summaryData.push(['Completed:', filteredResponses.filter(r => r.completed).length]);
+    summaryData.push(['In Progress:', filteredResponses.filter(r => !r.completed).length]);
+    summaryData.push(['Completion Rate:', `${filteredResponses.length > 0 ? Math.round((filteredResponses.filter(r => r.completed).length / filteredResponses.length) * 100) : 0}%`]);
     summaryData.push(['']);
     
     // Question Analysis by Section
@@ -152,9 +197,10 @@ export default function FormResults() {
       summaryData.push(['Question', 'Type', 'Responses', 'Average (Likert)', 'Distribution']);
       
       sectionQuestions.forEach(question => {
-        const questionResponses = responses.map(r => r.answers[question.id]).filter(Boolean);
+        const questionResponses = filteredResponses.map(r => r.answers[question.id]).filter(Boolean);
+        const questionType = question.question_type || question.type;
         
-        if (question.question_type === 'likert') {
+        if (questionType === 'likert') {
           const values = questionResponses.map(a => a.likert_value).filter(v => v != null);
           const average = values.length > 0 
             ? (values.reduce((sum, v) => sum + v, 0) / values.length).toFixed(2)
@@ -175,7 +221,7 @@ export default function FormResults() {
           const textResponses = questionResponses.filter(a => a.text_value);
           summaryData.push([
             question.title,
-            question.question_type,
+            questionType,
             textResponses.length,
             'N/A',
             'N/A'
@@ -193,8 +239,9 @@ export default function FormResults() {
     
     const allLikertValues: number[] = [];
     questions.forEach(q => {
-      if (q.question_type === 'likert') {
-        responses.forEach(r => {
+      const qType = q.question_type || q.type;
+      if (qType === 'likert') {
+        filteredResponses.forEach(r => {
           const answer = r.answers[q.id];
           if (answer?.likert_value) {
             allLikertValues.push(answer.likert_value);
@@ -231,15 +278,16 @@ export default function FormResults() {
     sections.forEach(section => {
       const sectionQuestions = questions.filter(q => q.section_id === section.id);
       sectionQuestions.forEach(q => {
+        const qType = q.question_type || q.type;
         responseHeaders.push(`[${section.title}] ${q.title}`);
-        if (q.question_type === 'likert' && q.features?.allowComment) {
+        if (qType === 'likert' && q.features?.allowComment) {
           responseHeaders.push(`[${section.title}] ${q.title} - Comment`);
         }
       });
     });
 
     // Create response rows
-    const responseRows = responses.map(response => {
+    const responseRows = filteredResponses.map(response => {
       const row: any[] = [
         response.id,
         new Date(response.submitted_at).toLocaleString(),
@@ -250,14 +298,15 @@ export default function FormResults() {
       sections.forEach(section => {
         const sectionQuestions = questions.filter(q => q.section_id === section.id);
         sectionQuestions.forEach(q => {
+          const qType = q.question_type || q.type;
           const answer = response.answers[q.id];
           if (!answer) {
             row.push('');
-            if (q.question_type === 'likert' && q.features?.allowComment) {
+            if (qType === 'likert' && q.features?.allowComment) {
               row.push('');
             }
           } else {
-            if (q.question_type === 'likert') {
+            if (qType === 'likert') {
               row.push(answer.likert_value || '');
               if (q.features?.allowComment) {
                 row.push(answer.comment || '');
@@ -290,12 +339,15 @@ export default function FormResults() {
     XLSX.utils.book_append_sheet(wb, responseSheet, 'Responses');
 
     // 3. Text Responses Sheet (for non-Likert questions)
-    const textQuestions = questions.filter(q => q.question_type !== 'likert');
+    const textQuestions = questions.filter(q => {
+      const qType = q.question_type || q.type;
+      return qType !== 'likert';
+    });
     if (textQuestions.length > 0) {
       const textData: any[][] = [['Question', 'Response ID', 'Response']];
       
       textQuestions.forEach(q => {
-        responses.forEach(r => {
+        filteredResponses.forEach(r => {
           const answer = r.answers[q.id];
           if (answer?.text_value) {
             textData.push([
@@ -366,6 +418,11 @@ export default function FormResults() {
     );
   }
 
+  // Filter responses by selected role
+  const filteredResponses = selectedRole === 'all' 
+    ? responses 
+    : responses.filter(r => r.role === selectedRole);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
@@ -387,14 +444,28 @@ export default function FormResults() {
                 <p className="text-gray-600 mt-2">{form.description}</p>
               )}
             </div>
-            <Button
-              onClick={exportToExcel}
-              disabled={responses.length === 0}
-              className="bg-cerulean hover:bg-cerulean/90 text-white"
-            >
-              <FileSpreadsheet className="w-4 h-4 mr-2" />
-              Export Excel
-            </Button>
+            <div className="flex gap-4">
+              {availableRoles.length > 0 && (
+                <select
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-cerulean"
+                >
+                  <option value="all">All Roles</option>
+                  {availableRoles.map(role => (
+                    <option key={role} value={role}>{role}</option>
+                  ))}
+                </select>
+              )}
+              <Button
+                onClick={exportToExcel}
+                disabled={filteredResponses.length === 0}
+                className="bg-cerulean hover:bg-cerulean/90 text-white"
+              >
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Export Excel
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -402,10 +473,10 @@ export default function FormResults() {
         <div className="grid gap-4 md:grid-cols-4 mb-8">
           <Card>
             <CardHeader className="pb-3">
-              <CardDescription>Total Responses</CardDescription>
+              <CardDescription>Total Responses{selectedRole !== 'all' && ` (${selectedRole})`}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-800">{responses.length}</div>
+              <div className="text-2xl font-bold text-gray-800">{filteredResponses.length}</div>
             </CardContent>
           </Card>
           <Card>
@@ -414,7 +485,7 @@ export default function FormResults() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {responses.filter(r => r.completed).length}
+                {filteredResponses.filter(r => r.completed).length}
               </div>
             </CardContent>
           </Card>
@@ -424,7 +495,7 @@ export default function FormResults() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-amber-600">
-                {responses.filter(r => !r.completed).length}
+                {filteredResponses.filter(r => !r.completed).length}
               </div>
             </CardContent>
           </Card>
@@ -434,8 +505,8 @@ export default function FormResults() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-cambridge-blue">
-                {responses.length > 0 
-                  ? `${Math.round((responses.filter(r => r.completed).length / responses.length) * 100)}%`
+                {filteredResponses.length > 0 
+                  ? `${Math.round((filteredResponses.filter(r => r.completed).length / filteredResponses.length) * 100)}%`
                   : '0%'
                 }
               </div>
@@ -448,13 +519,18 @@ export default function FormResults() {
           <CardHeader>
             <CardTitle>Question Analysis</CardTitle>
             <CardDescription>
-              Average responses and distribution for each question
+              Average responses and distribution for each question{selectedRole !== 'all' && ` (${selectedRole} only)`}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {sections.map(section => {
-              const sectionQuestions = questions.filter(q => q.section_id === section.id);
-              if (sectionQuestions.length === 0) return null;
+            {sections.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">No sections loaded</p>
+            ) : questions.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">No questions loaded</p>
+            ) : (
+              sections.map(section => {
+                const sectionQuestions = questions.filter(q => q.section_id === section.id);
+                if (sectionQuestions.length === 0) return null;
 
               return (
                 <div key={section.id} className="mb-8 last:mb-0">
@@ -463,9 +539,10 @@ export default function FormResults() {
                   </h3>
                   <div className="space-y-4">
                     {sectionQuestions.map(question => {
-                      const questionResponses = responses.map(r => r.answers[question.id]).filter(Boolean);
+                      const questionResponses = filteredResponses.map(r => r.answers[question.id]).filter(Boolean);
+                      const questionType = question.question_type || question.type;
                       
-                      if (question.question_type === 'likert') {
+                      if (questionType === 'likert') {
                         const values = questionResponses.map(a => a.likert_value).filter(v => v != null);
                         const average = values.length > 0 
                           ? (values.reduce((sum, v) => sum + v, 0) / values.length).toFixed(2)
@@ -509,7 +586,7 @@ export default function FormResults() {
                           </div>
                         );
                       } else {
-                        const textResponses = questionResponses.filter(a => a.text_value);
+                        const textResponses = questionResponses.filter(a => a.text_value || a.value);
                         return (
                           <div key={question.id} className="border-l-4 border-cerulean/30 pl-4">
                             <p className="font-medium text-gray-800 mb-2">
@@ -518,6 +595,7 @@ export default function FormResults() {
                             <div className="text-sm">
                               <span className="text-gray-600">Responses: </span>
                               <span className="font-bold">{textResponses.length}</span>
+                              <span className="text-gray-500 ml-2">({questionType})</span>
                             </div>
                           </div>
                         );
@@ -526,84 +604,12 @@ export default function FormResults() {
                   </div>
                 </div>
               );
-            })}
-          </CardContent>
-        </Card>
-
-        {/* Individual Responses */}
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>Individual Responses</CardTitle>
-            <CardDescription>
-              Detailed view of all submitted responses
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {responses.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No responses yet</p>
-            ) : (
-              <div className="space-y-4">
-                {responses.map(response => (
-                  <Card key={response.id} className="border-cambridge-blue/20">
-                    <CardHeader className="pb-3">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <span className="text-sm font-medium">Response #{response.id}</span>
-                          <span className={`ml-2 px-2 py-1 text-xs rounded ${
-                            response.completed 
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-amber-100 text-amber-700'
-                          }`}>
-                            {response.completed ? 'Completed' : 'In Progress'}
-                          </span>
-                        </div>
-                        <span className="text-sm text-gray-600">
-                          {new Date(response.submitted_at).toLocaleString()}
-                        </span>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const details = document.getElementById(`response-${response.id}`);
-                          if (details) {
-                            details.classList.toggle('hidden');
-                          }
-                        }}
-                      >
-                        View Details
-                      </Button>
-                      <div id={`response-${response.id}`} className="hidden mt-4 space-y-2">
-                        {questions.map(q => {
-                          const answer = response.answers[q.id];
-                          if (!answer) return null;
-                          
-                          return (
-                            <div key={q.id} className="text-sm">
-                              <span className="font-medium">{q.title}: </span>
-                              {q.question_type === 'likert' ? (
-                                <>
-                                  <span className="text-cambridge-blue">{answer.likert_value}</span>
-                                  {answer.comment && (
-                                    <span className="text-gray-600 ml-2">({answer.comment})</span>
-                                  )}
-                                </>
-                              ) : (
-                                <span className="text-gray-700">{answer.text_value}</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+            })
             )}
           </CardContent>
         </Card>
+
+
       </div>
     </div>
   );

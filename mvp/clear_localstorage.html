@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear LocalStorage</title>
+</head>
+<body>
+    <h1>Clear Form Data</h1>
+    <button onclick="clearData()">Clear All Saved Form Data</button>
+    <div id="result"></div>
+    <script>
+        function clearData() {
+            const keys = Object.keys(localStorage);
+            const formKeys = keys.filter(k => k.includes('likert-form-progress'));
+            formKeys.forEach(key => {
+                localStorage.removeItem(key);
+                console.log('Removed:', key);
+            });
+            document.getElementById('result').innerHTML = `Cleared ${formKeys.length} form(s) from localStorage`;
+        }
+    </script>
+</body>
+</html>

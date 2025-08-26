@@ -1,12 +1,16 @@
 {
-  "$schema": "../form-schema.json",
   "id": "tcw-ed-performance-review",
   "title": "TCW Executive Director Performance Review",
   "description": "Performance review for the Executive Director covering January - June 2025",
-  "status": "published",
   "instructions": "This review covers the performance period from January - June 2025. Results and comments will be viewed in aggregate by role (staff / board / ED).\n\nFor reference, the Executive Director job description summary:\n\nThe Executive Director will be responsible for strategic planning, operational management, community outreach, and volunteer coordination and will work closely with the Board of Directors to ensure the financial health and sustainability of the organization while enhancing its programs and services. This role requires a hands-on leader who is both a strategic thinker and a practical manager, capable of inspiring staff, volunteers, and community partners.",
-  "welcome_message": "",
-  "closing_message": "Thank you for completing this performance review. Your feedback is valuable in supporting the Executive Director's continued growth and success.",
+  "welcome_message": "Thank you for participating in the TCW Executive Director Performance Review. Your thoughtful feedback is essential for supporting the ED's continued growth and success.",
+  "closing_message": "Thank you for completing the Executive Director Performance Review. Your feedback has been submitted successfully and will be reviewed in aggregate with other responses. We appreciate your time and thoughtful input in supporting TCW's leadership development.",
+  "status": "published",
+  "settings": {
+    "estimatedTime": "20-30 minutes",
+    "confidentialityNotice": "All responses are confidential and will be aggregated by respondent category (Staff, Board, ED). Individual responses will not be attributed to specific reviewers. Results will be shared with the Board of Directors and the Executive Director in summary form only.",
+    "reviewPeriod": "January - June 2025"
+  },
   "sections": [
     {
       "id": "organizational-leadership",
@@ -19,14 +23,22 @@
           "title": "What were the Executive Director's top 3-5 objectives for the organization?",
           "question_type": "textarea",
           "is_required": true,
+          "allow_comment": true,
+          "help_text": "Please list the key objectives you observed or were communicated",
           "position": 1,
-          "help_text": "Please list the key objectives you observed or were communicated"
+          "features": {
+            "placeholder": "List 3-5 key objectives, one per line...",
+            "rows": 5,
+            "charLimit": 1000
+          }
         },
         {
           "id": "leads-toward-goals",
           "title": "The Executive Director effectively leads the organization toward achieving its strategic goals",
           "question_type": "likert",
           "is_required": true,
+          "allow_comment": true,
+          "help_text": "",
           "position": 2
         },
         {
@@ -34,6 +46,8 @@
           "title": "The ED demonstrates clear understanding of the Board's objectives",
           "question_type": "likert",
           "is_required": true,
+          "allow_comment": true,
+          "help_text": "",
           "position": 3
         },
         {
@@ -41,6 +55,8 @@
           "title": "The ED successfully translates strategic direction into actionable results",
           "question_type": "likert",
           "is_required": true,
+          "allow_comment": true,
+          "help_text": "",
           "position": 4
         }
       ]
@@ -56,28 +72,36 @@
           "title": "The ED demonstrates effective long-term and short-term planning",
           "question_type": "likert",
           "is_required": true,
-          "position": 1
+          "allow_comment": true,
+          "help_text": "",
+          "position": 5
         },
         {
           "id": "manages-operations",
           "title": "The ED manages operations efficiently and effectively",
           "question_type": "likert",
           "is_required": true,
-          "position": 2
+          "allow_comment": true,
+          "help_text": "",
+          "position": 6
         },
         {
           "id": "balances-vision-management",
           "title": "The ED balances strategic vision with practical management needs",
           "question_type": "likert",
           "is_required": true,
-          "position": 3
+          "allow_comment": true,
+          "help_text": "",
+          "position": 7
         },
         {
           "id": "inspires-stakeholders",
           "title": "The ED inspires staff, volunteers, and community partners",
           "question_type": "likert",
           "is_required": true,
-          "position": 4
+          "allow_comment": true,
+          "help_text": "",
+          "position": 8
         }
       ]
     },
@@ -92,21 +116,27 @@
           "title": "The ED provides strong organizational leadership",
           "question_type": "likert",
           "is_required": true,
-          "position": 1
+          "allow_comment": true,
+          "help_text": "",
+          "position": 9
         },
         {
           "id": "board-collaboration",
           "title": "The ED works and communicates collaboratively with the Board of Directors",
           "question_type": "likert",
           "is_required": true,
-          "position": 2
+          "allow_comment": true,
+          "help_text": "",
+          "position": 10
         },
         {
           "id": "governance-practices",
           "title": "The ED ensures proper governance practices are followed",
           "question_type": "likert",
           "is_required": true,
-          "position": 3
+          "allow_comment": true,
+          "help_text": "",
+          "position": 11
         }
       ]
     },
@@ -121,28 +151,36 @@
           "title": "The ED oversees programs that align with organizational mission",
           "question_type": "likert",
           "is_required": true,
-          "position": 1
+          "allow_comment": true,
+          "help_text": "",
+          "position": 12
         },
         {
           "id": "enhances-programs",
           "title": "The ED enhances and improves existing programs and services",
           "question_type": "likert",
           "is_required": true,
-          "position": 2
+          "allow_comment": true,
+          "help_text": "",
+          "position": 13
         },
         {
           "id": "manages-daily-operations",
           "title": "The ED manages day-to-day operations effectively",
           "question_type": "likert",
           "is_required": true,
-          "position": 3
+          "allow_comment": true,
+          "help_text": "",
+          "position": 14
         },
         {
           "id": "staff-collaboration",
           "title": "The ED works and communicates collaboratively with the Staff",
           "question_type": "likert",
           "is_required": true,
-          "position": 4
+          "allow_comment": true,
+          "help_text": "",
+          "position": 15
         }
       ]
     },
@@ -157,28 +195,36 @@
           "title": "The ED ensures the financial health / sustainability of the organization",
           "question_type": "likert",
           "is_required": true,
-          "position": 1
+          "allow_comment": true,
+          "help_text": "",
+          "position": 16
         },
         {
           "id": "fundraising-model",
           "title": "The ED develops and implements a sustainable fundraising model",
           "question_type": "likert",
           "is_required": true,
-          "position": 2
+          "allow_comment": true,
+          "help_text": "",
+          "position": 17
         },
         {
           "id": "leads-fundraising",
           "title": "The ED successfully leads fundraising initiatives",
           "question_type": "likert",
           "is_required": true,
-          "position": 3
+          "allow_comment": true,
+          "help_text": "",
+          "position": 18
         },
         {
           "id": "financial-management",
           "title": "The ED demonstrates sound financial management practices",
           "question_type": "likert",
           "is_required": true,
-          "position": 4
+          "allow_comment": true,
+          "help_text": "",
+          "position": 19
         }
       ]
     },
@@ -193,28 +239,36 @@
           "title": "The ED effectively represents the organization in the community",
           "question_type": "likert",
           "is_required": true,
-          "position": 1
+          "allow_comment": true,
+          "help_text": "",
+          "position": 20
         },
         {
           "id": "community-relationships",
           "title": "The ED builds strong relationships with community partners",
           "question_type": "likert",
           "is_required": true,
-          "position": 2
+          "allow_comment": true,
+          "help_text": "",
+          "position": 21
         },
         {
           "id": "volunteer-coordination",
           "title": "The ED coordinates volunteer efforts successfully",
           "question_type": "likert",
           "is_required": true,
-          "position": 3
+          "allow_comment": true,
+          "help_text": "",
+          "position": 22
         },
         {
           "id": "mission-advocacy",
           "title": "The ED advocates effectively for the organization's mission",
           "question_type": "likert",
           "is_required": true,
-          "position": 4
+          "allow_comment": true,
+          "help_text": "",
+          "position": 23
         }
       ]
     },
@@ -229,42 +283,54 @@
           "title": "The ED demonstrates persistence in pursuing organizational goals",
           "question_type": "likert",
           "is_required": true,
-          "position": 1
+          "allow_comment": true,
+          "help_text": "",
+          "position": 24
         },
         {
           "id": "continuous-improvement",
           "title": "The ED shows commitment to continuous improvement",
           "question_type": "likert",
           "is_required": true,
-          "position": 2
+          "allow_comment": true,
+          "help_text": "",
+          "position": 25
         },
         {
           "id": "respect",
           "title": "The ED treats all stakeholders with decency and respect",
           "question_type": "likert",
           "is_required": true,
-          "position": 3
+          "allow_comment": true,
+          "help_text": "",
+          "position": 26
         },
         {
           "id": "humility",
           "title": "The ED demonstrates humility in leadership",
           "question_type": "likert",
           "is_required": true,
-          "position": 4
+          "allow_comment": true,
+          "help_text": "",
+          "position": 27
         },
         {
           "id": "integrity",
           "title": "The ED acts with integrity in all professional dealings",
           "question_type": "likert",
           "is_required": true,
-          "position": 5
+          "allow_comment": true,
+          "help_text": "",
+          "position": 28
         },
         {
           "id": "mission-commitment",
           "title": "The ED shows deep understanding and commitment to TCW's mission",
           "question_type": "likert",
           "is_required": true,
-          "position": 6
+          "allow_comment": true,
+          "help_text": "",
+          "position": 29
         }
       ]
     },
@@ -279,28 +345,36 @@
           "title": "The ED sets a clear and compelling vision for TCW's work",
           "question_type": "likert",
           "is_required": true,
-          "position": 1
+          "allow_comment": true,
+          "help_text": "",
+          "position": 30
         },
         {
           "id": "manages-execution",
           "title": "The ED manages execution of plans and initiatives effectively",
           "question_type": "likert",
           "is_required": true,
-          "position": 2
+          "allow_comment": true,
+          "help_text": "",
+          "position": 31
         },
         {
           "id": "external-communication",
           "title": "The ED excels at external communication and relationship-building",
           "question_type": "likert",
           "is_required": true,
-          "position": 3
+          "allow_comment": true,
+          "help_text": "",
+          "position": 32
         },
         {
           "id": "models-behaviors",
           "title": "The ED models the behaviors expected of all employees",
           "question_type": "likert",
           "is_required": true,
-          "position": 4
+          "allow_comment": true,
+          "help_text": "",
+          "position": 33
         }
       ]
     },
@@ -315,28 +389,36 @@
           "title": "The ED's leadership positively impacts organizational success",
           "question_type": "likert",
           "is_required": true,
-          "position": 1
+          "allow_comment": true,
+          "help_text": "",
+          "position": 34
         },
         {
           "id": "addresses-improvements",
           "title": "The ED effectively addresses areas needing improvement",
           "question_type": "likert",
           "is_required": true,
-          "position": 2
+          "allow_comment": true,
+          "help_text": "",
+          "position": 35
         },
         {
           "id": "achieves-results",
           "title": "The ED achieves measurable results in key responsibility areas",
           "question_type": "likert",
           "is_required": true,
-          "position": 3
+          "allow_comment": true,
+          "help_text": "",
+          "position": 36
         },
         {
           "id": "confidence-in-leadership",
           "title": "I am confident in the ED's ability to lead the organization forward",
           "question_type": "likert",
           "is_required": true,
-          "position": 4
+          "allow_comment": true,
+          "help_text": "",
+          "position": 37
         }
       ]
     },
@@ -351,40 +433,70 @@
           "title": "What specific accomplishments best exemplify the ED's performance?",
           "question_type": "textarea",
           "is_required": false,
-          "position": 1,
-          "help_text": "Please provide specific examples"
+          "allow_comment": true,
+          "help_text": "Please provide specific examples",
+          "position": 38,
+          "features": {
+            "placeholder": "Describe specific accomplishments, projects, or initiatives that demonstrate strong performance...",
+            "rows": 5,
+            "charLimit": 1500
+          }
         },
         {
           "id": "growth-opportunities",
           "title": "What areas present the greatest opportunities for the ED's growth?",
           "question_type": "textarea",
           "is_required": false,
-          "position": 2,
-          "help_text": "Please be specific and constructive"
+          "allow_comment": true,
+          "help_text": "Please be specific and constructive",
+          "position": 39,
+          "features": {
+            "placeholder": "Identify specific skills, areas, or competencies where growth would benefit the organization...",
+            "rows": 5,
+            "charLimit": 1500
+          }
         },
         {
           "id": "support-needed",
           "title": "What support does the ED need to be more successful?",
           "question_type": "textarea",
           "is_required": false,
-          "position": 3,
-          "help_text": "Consider resources, training, or structural support"
+          "allow_comment": true,
+          "help_text": "Consider resources, training, or structural support",
+          "position": 40,
+          "features": {
+            "placeholder": "Suggest specific resources, training, staffing, or structural changes that would enhance effectiveness...",
+            "rows": 5,
+            "charLimit": 1500
+          }
         },
         {
           "id": "priority-goals",
           "title": "What specific goals should be prioritized for the next review period?",
           "question_type": "textarea",
           "is_required": false,
-          "position": 4,
-          "help_text": "Please suggest 2-3 key priorities"
+          "allow_comment": true,
+          "help_text": "Please suggest 2-3 key priorities",
+          "position": 41,
+          "features": {
+            "placeholder": "List 2-3 specific, measurable goals for July - December 2025...",
+            "rows": 5,
+            "charLimit": 1000
+          }
         },
         {
           "id": "other-thoughts",
           "title": "Any other thoughts:",
           "question_type": "textarea",
           "is_required": false,
-          "position": 5,
-          "help_text": "Please share any additional feedback or observations"
+          "allow_comment": true,
+          "help_text": "Please share any additional feedback or observations",
+          "position": 42,
+          "features": {
+            "placeholder": "Share any additional feedback, observations, or suggestions not covered above...",
+            "rows": 5,
+            "charLimit": 2000
+          }
         }
       ]
     }

@@ -1,9 +1,21 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 export default function SuccessPage() {
   const navigate = useNavigate();
+  const [closingMessage, setClosingMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Retrieve closing message from sessionStorage
+    const message = sessionStorage.getItem('form_closing_message');
+    if (message) {
+      setClosingMessage(message);
+      // Clean up after retrieving
+      sessionStorage.removeItem('form_closing_message');
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-cerulean/50 flex items-center justify-center px-4">
@@ -20,8 +32,8 @@ export default function SuccessPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <p className="text-gray-800/80 text-lg">
-            We appreciate your feedback and will review your responses carefully.
+          <p className="text-gray-800/80 text-lg whitespace-pre-wrap">
+            {closingMessage || 'We appreciate your feedback and will review your responses carefully.'}
           </p>
           <Button 
             onClick={() => navigate('/')} 
