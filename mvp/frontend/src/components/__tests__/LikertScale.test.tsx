@@ -3,105 +3,90 @@ import { render, fireEvent, screen } from "@testing-library/react";
 import LikertScale from "../LikertScale";
 
 describe("LikertScale Component", () => {
-  const mockQuestion = {
-    id: "q1",
-    type: "likert" as const,
-    text: "How satisfied are you with our service?",
-    required: true,
-    scale_labels: {
-      "1": "Strongly Disagree",
-      "2": "Disagree",
-      "3": "Neutral",
-      "4": "Agree",
-      "5": "Strongly Agree"
-    }
-  };
 
   test("should render all scale options", () => {
     render(
       <LikertScale 
-        question={mockQuestion}
-        value=""
+        value={undefined}
         onChange={() => {}}
+        minLabel="Strongly Disagree"
+        maxLabel="Strongly Agree"
       />
     );
     
     expect(screen.getByText("Strongly Disagree")).toBeDefined();
-    expect(screen.getByText("Disagree")).toBeDefined();
-    expect(screen.getByText("Neutral")).toBeDefined();
-    expect(screen.getByText("Agree")).toBeDefined();
     expect(screen.getByText("Strongly Agree")).toBeDefined();
+    // Check for number buttons
+    expect(screen.getByText("1")).toBeDefined();
+    expect(screen.getByText("5")).toBeDefined();
   });
 
   test("should call onChange when option is selected", () => {
-    let selectedValue = "";
+    let calledWith: number | undefined = undefined;
+    const handleChange = (value: number) => {
+      calledWith = value;
+    };
+    
     render(
       <LikertScale 
-        question={mockQuestion}
-        value={selectedValue}
-        onChange={(value) => { selectedValue = value; }}
+        value={undefined}
+        onChange={handleChange}
       />
     );
     
-    const agreeOption = screen.getByLabelText("Agree");
-    fireEvent.click(agreeOption);
+    const option4 = screen.getByText("4");
+    fireEvent.click(option4);
     
-    expect(selectedValue).toBe("4");
+    // Type assertion needed for TypeScript
+    expect(calledWith!).toEqual(4);
   });
 
   test("should display selected value", () => {
     const { rerender } = render(
       <LikertScale 
-        question={mockQuestion}
-        value="3"
+        value={3}
         onChange={() => {}}
       />
     );
     
-    const neutralOption = screen.getByLabelText("Neutral");
-    expect(neutralOption).toBeChecked();
+    // Check that button 3 has selected styling (scale-110 class)
+    const button3 = screen.getByText("3");
+    expect(button3.className).toContain("scale-110");
     
     rerender(
       <LikertScale 
-        question={mockQuestion}
-        value="5"
+        value={5}
         onChange={() => {}}
       />
     );
     
-    const stronglyAgreeOption = screen.getByLabelText("Strongly Agree");
-    expect(stronglyAgreeOption).toBeChecked();
+    // Check that button 5 has selected styling
+    const button5 = screen.getByText("5");
+    expect(button5.className).toContain("scale-110");
   });
 
-  test("should handle required validation", () => {
+  test("should render with custom min/max values", () => {
     render(
       <LikertScale 
-        question={{ ...mockQuestion, required: true }}
-        value=""
+        value={undefined}
         onChange={() => {}}
+        min={0}
+        max={10}
       />
     );
     
-    expect(screen.getByText("*")).toBeDefined();
+    // Check for custom range buttons
+    expect(screen.getByText("0")).toBeDefined();
+    expect(screen.getByText("10")).toBeDefined();
   });
 
   test("should handle custom scale labels", () => {
-    const customQuestion = {
-      ...mockQuestion,
-      scale_labels: {
-        "1": "Very Poor",
-        "2": "Poor",
-        "3": "Average",
-        "4": "Good",
-        "5": "Excellent"
-      }
-    };
-    
     render(
       <LikertScale 
-        question={customQuestion}
-        value=""
+        value={undefined}
         onChange={() => {}}
+        minLabel="Very Poor"
+        maxLabel="Excellent"
       />
     );
     
