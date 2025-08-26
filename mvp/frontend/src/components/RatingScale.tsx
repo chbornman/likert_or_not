@@ -66,8 +66,8 @@ export default function RatingScale({
           onClick={() => onChange(rating)}
           className={`w-10 h-10 rounded-full border-2 transition-colors ${
             value === rating
-              ? 'bg-blue-500 text-white border-blue-500'
-              : 'border-gray-300 hover:border-blue-400'
+              ? 'bg-cerulean text-white border-cerulean'
+              : 'border-gray-300 hover:border-cambridge-blue'
           }`}
         >
           {rating}

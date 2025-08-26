@@ -50,7 +50,7 @@ export default function LikertScale({
                 ? `${getButtonColor(option, true)} text-white transform scale-110 shadow-lg animate-[pop_0.3s_ease-out]`
                 : `${getButtonColor(option, false)} text-gray-700 hover:scale-105`
               }
-              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-700
+              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cerulean
             `}
             aria-label={`Rate ${option} out of ${max}`}
           >

@@ -39,6 +39,7 @@ export default function FormPage() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [draggingQuestion, setDraggingQuestion] = useState<number | null>(null);
+  const [checkingSubmission, setCheckingSubmission] = useState(false);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -392,11 +393,40 @@ export default function FormPage() {
     return nameValid && emailValid && role !== '';
   };
 
-  const handleNextSection = () => {
+  const handleNextSection = async () => {
     if (currentSection === -1) {
       if (validatePersonalInfo()) {
-        setCurrentSection(0);
+        // Check if email has already submitted this form
+        setCheckingSubmission(true);
         setError('');
+        try {
+          const response = await fetch(`/api/forms/${formId}/check-submission`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email }),
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.has_submitted) {
+              setError('Thank you for your interest! Our records show you have already submitted a response for this form. To ensure fair participation, each person can only submit once. If you believe this is an error, please contact the form administrator.');
+              setCheckingSubmission(false);
+              return;
+            }
+          }
+          // If check passes or fails silently, continue
+          setCurrentSection(0);
+          setError('');
+        } catch (err) {
+          // If the check fails, still allow them to proceed (fail open)
+          console.error('Failed to check for existing submission:', err);
+          setCurrentSection(0);
+          setError('');
+        } finally {
+          setCheckingSubmission(false);
+        }
       } else {
         setError('Please provide your name and valid email');
       }
@@ -1272,8 +1302,20 @@ export default function FormPage() {
             )}
 
             {error && (
-              <div className="mt-6 p-4 bg-rose-quartz/10 border-l-4 border-rose-quartz text-gunmetal rounded-md">
-                {error}
+              <div className={`mt-6 p-4 rounded-md ${
+                error.includes('already submitted') 
+                  ? 'bg-amber-50 border-l-4 border-amber-500 text-amber-900'
+                  : 'bg-rose-quartz/10 border-l-4 border-rose-quartz text-gunmetal'
+              }`}>
+                {error.includes('already submitted') && (
+                  <div className="flex items-start">
+                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    <div>{error}</div>
+                  </div>
+                )}
+                {!error.includes('already submitted') && error}
               </div>
             )}
 
@@ -1293,9 +1335,10 @@ export default function FormPage() {
               {currentSection < totalSections - 1 ? (
                 <Button
                   onClick={handleNextSection}
-                  className="bg-gradient-to-r from-cerulean to-cambridge-blue hover:from-cerulean/90 hover:to-cambridge-blue/90 text-white px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-base font-medium"
+                  disabled={checkingSubmission}
+                  className="bg-gradient-to-r from-cerulean to-cambridge-blue hover:from-cerulean/90 hover:to-cambridge-blue/90 text-white px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Next Section →
+                  {checkingSubmission ? 'Checking...' : 'Next Section →'}
                 </Button>
               ) : currentSection === totalSections - 1 ? (
                 <Button
@@ -1310,9 +1353,10 @@ export default function FormPage() {
                 <Button
                   type="button"
                   onClick={handleNextSection}
-                  className="bg-gradient-to-r from-cerulean to-cambridge-blue hover:from-cerulean/90 hover:to-cambridge-blue/90 text-white font-semibold px-6 py-3 rounded-lg transition-all shadow-lg"
+                  disabled={checkingSubmission}
+                  className="bg-gradient-to-r from-cerulean to-cambridge-blue hover:from-cerulean/90 hover:to-cambridge-blue/90 text-white font-semibold px-6 py-3 rounded-lg transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Begin Evaluation →
+                  {checkingSubmission ? 'Checking...' : 'Begin Evaluation →'}
                 </Button>
               )}
             </div>

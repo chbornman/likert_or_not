@@ -38,7 +38,7 @@ export default function FormList() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cerulean mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading forms...</p>
         </div>
       </div>
@@ -70,7 +70,7 @@ export default function FormList() {
       <div className="max-w-4xl mx-auto px-4">
         <div className="flex flex-col items-center mb-8">
           <Logo className="w-32 h-32 mb-4" />
-          <h1 className="text-3xl font-bold text-blue-800 mb-2">Available Forms</h1>
+          <h1 className="text-3xl font-bold text-gunmetal mb-2">Available Forms</h1>
           <p className="text-gray-600 text-center">Select a form below to begin</p>
         </div>
         
@@ -85,10 +85,10 @@ export default function FormList() {
                   className="block opacity-75 cursor-not-allowed"
                 >
                 <Card className={`shadow-lg ${!isFinished ? 'hover:shadow-xl transform hover:-translate-y-1' : ''} transition-all duration-200 border-green-400/30`}>
-                  <CardHeader className={`bg-gradient-to-r ${isFinished ? 'from-gray-400/10 to-gray-300/10' : 'from-blue-800/10 to-blue-600/10'}`}>
+                  <CardHeader className={`bg-gradient-to-r ${isFinished ? 'from-gray-400/10 to-gray-300/10' : 'from-cerulean/10 to-cambridge-blue/10'}`}>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <CardTitle className={`text-xl ${isFinished ? 'text-gray-600' : 'text-blue-800 group-hover:text-blue-600'} transition-colors`}>
+                        <CardTitle className={`text-xl ${isFinished ? 'text-gray-600' : 'text-gunmetal group-hover:text-cerulean'} transition-colors`}>
                           {form.title}
                         </CardTitle>
                         {form.description && (
@@ -143,10 +143,10 @@ export default function FormList() {
                 className="block group"
               >
                 <Card className={`shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-200 border-green-400/30`}>
-                  <CardHeader className={`bg-gradient-to-r from-blue-800/10 to-blue-600/10`}>
+                  <CardHeader className={`bg-gradient-to-r from-cerulean/10 to-cambridge-blue/10`}>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <CardTitle className={`text-xl text-blue-800 group-hover:text-blue-600 transition-colors`}>
+                        <CardTitle className={`text-xl text-gunmetal group-hover:text-cerulean transition-colors`}>
                           {form.title}
                         </CardTitle>
                         {form.description && (

@@ -38,7 +38,7 @@ export default function TextAreaInput({
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cerulean"
         placeholder={placeholder}
         maxLength={maxLength}
         rows={rows}
@@ -51,7 +51,7 @@ export default function TextAreaInput({
             <div className="w-full bg-gray-200 rounded-full h-1 mr-3">
               <div
                 className={`h-1 rounded-full transition-all ${
-                  isNearLimit ? 'bg-stone-400' : 'bg-blue-500'
+                  isNearLimit ? 'bg-stone-400' : 'bg-cambridge-blue'
                 }`}
                 style={{ width: `${Math.min(charPercentage, 100)}%` }}
               />
