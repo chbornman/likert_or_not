@@ -1,6 +1,6 @@
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface YesNoQuestionProps {
   questionId: string;
@@ -31,13 +31,13 @@ export default function YesNoQuestion({
           {isRequired && <span className="text-red-500 ml-1">*</span>}
         </Label>
       </div>
-      
-      <RadioGroup value={value || ''} onValueChange={onChange}>
+
+      <RadioGroup value={value || ""} onValueChange={onChange}>
         <div className="flex gap-6">
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="yes" id={`${questionId}-yes`} />
-            <Label 
-              htmlFor={`${questionId}-yes`} 
+            <Label
+              htmlFor={`${questionId}-yes`}
               className="font-normal cursor-pointer"
             >
               Yes
@@ -45,8 +45,8 @@ export default function YesNoQuestion({
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="no" id={`${questionId}-no`} />
-            <Label 
-              htmlFor={`${questionId}-no`} 
+            <Label
+              htmlFor={`${questionId}-no`}
               className="font-normal cursor-pointer"
             >
               No
@@ -57,12 +57,15 @@ export default function YesNoQuestion({
 
       {allowComment && (
         <div className="mt-4">
-          <Label htmlFor={`${questionId}-comment`} className="text-sm text-gray-600">
+          <Label
+            htmlFor={`${questionId}-comment`}
+            className="text-sm text-gray-600"
+          >
             Additional comments (optional)
           </Label>
           <Textarea
             id={`${questionId}-comment`}
-            value={comment || ''}
+            value={comment || ""}
             onChange={(e) => onCommentChange?.(e.target.value)}
             placeholder="Add any additional comments here..."
             className="mt-1"

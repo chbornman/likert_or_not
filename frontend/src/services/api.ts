@@ -1,6 +1,6 @@
 // API Service Layer for v2 endpoints
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || "";
 
 // Types matching backend models
 export interface Form {
@@ -44,22 +44,22 @@ export interface Question {
   features: QuestionFeatures;
 }
 
-export type QuestionType = 
-  | 'likert'
-  | 'text'
-  | 'textarea'
-  | 'select'
-  | 'multiselect'
-  | 'number'
-  | 'section_header'
-  | 'multiple_choice'
-  | 'checkbox'
-  | 'dropdown'
-  | 'yes_no'
-  | 'rating'
-  | 'date'
-  | 'time'
-  | 'datetime';
+export type QuestionType =
+  | "likert"
+  | "text"
+  | "textarea"
+  | "select"
+  | "multiselect"
+  | "number"
+  | "section_header"
+  | "multiple_choice"
+  | "checkbox"
+  | "dropdown"
+  | "yes_no"
+  | "rating"
+  | "date"
+  | "time"
+  | "datetime";
 
 export interface QuestionFeatures {
   required?: boolean;
@@ -81,7 +81,7 @@ export interface QuestionFeatures {
   min?: number | string; // For number, rating, date/time types
   max?: number | string; // For number, rating, date/time types
   step?: number; // For number type
-  ratingStyle?: 'stars' | 'numbers'; // For rating type
+  ratingStyle?: "stars" | "numbers"; // For rating type
   dateFormat?: string; // For date/time types
 }
 
@@ -129,22 +129,22 @@ class ApiClient {
 
   constructor() {
     // Load token from localStorage if available
-    if (typeof localStorage !== 'undefined') {
-      this.token = localStorage.getItem('auth_token');
+    if (typeof localStorage !== "undefined") {
+      this.token = localStorage.getItem("auth_token");
     }
   }
 
   private async request<T>(
     path: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<T> {
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string> || {}),
+      "Content-Type": "application/json",
+      ...((options.headers as Record<string, string>) || {}),
     };
 
     if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+      headers["Authorization"] = `Bearer ${this.token}`;
     }
 
     const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -153,7 +153,9 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      const error = await response
+        .json()
+        .catch(() => ({ error: "Unknown error" }));
       throw new Error(error.error || `HTTP ${response.status}`);
     }
 
@@ -162,68 +164,71 @@ class ApiClient {
 
   // Authentication methods
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const response = await this.request<LoginResponse>('/api/auth/login', {
-      method: 'POST',
+    const response = await this.request<LoginResponse>("/api/auth/login", {
+      method: "POST",
       body: JSON.stringify(credentials),
     });
-    
+
     this.token = response.token;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('auth_token', response.token);
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("auth_token", response.token);
     }
-    
+
     return response;
   }
 
   async logout(): Promise<void> {
     try {
-      await this.request('/api/auth/logout', { method: 'POST' });
+      await this.request("/api/auth/logout", { method: "POST" });
     } finally {
       this.token = null;
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem('auth_token');
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem("auth_token");
       }
     }
   }
 
   async verifyAuth(): Promise<AuthUser> {
-    return this.request<AuthUser>('/api/auth/verify');
+    return this.request<AuthUser>("/api/auth/verify");
   }
 
   // Form methods
   async listForms(): Promise<Form[]> {
-    return this.request<Form[]>('/api/forms');
+    return this.request<Form[]>("/api/forms");
   }
 
   async getForm(formId: string): Promise<FormWithSections> {
     return this.request<FormWithSections>(`/api/forms/${formId}`);
   }
 
-  async submitForm(formId: string, response: FormResponse): Promise<{ id: string }> {
+  async submitForm(
+    formId: string,
+    response: FormResponse,
+  ): Promise<{ id: string }> {
     return this.request<{ id: string }>(`/api/forms/${formId}/submit`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(response),
     });
   }
 
   // Admin methods
   async createForm(form: Partial<Form>): Promise<Form> {
-    return this.request<Form>('/api/admin/forms', {
-      method: 'POST',
+    return this.request<Form>("/api/admin/forms", {
+      method: "POST",
       body: JSON.stringify(form),
     });
   }
 
   async updateForm(formId: string, updates: Partial<Form>): Promise<void> {
     await this.request(`/api/admin/forms/${formId}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(updates),
     });
   }
 
   async deleteForm(formId: string): Promise<void> {
     await this.request(`/api/admin/forms/${formId}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   }
 
@@ -235,18 +240,20 @@ class ApiClient {
     return this.request<any>(`/api/forms/${formId}/stats`);
   }
 
-  async exportFormData(formId: string, format: string = 'csv'): Promise<any> {
-    return this.request<any>(`/api/admin/forms/${formId}/export?format=${format}`);
+  async exportFormData(formId: string, format: string = "csv"): Promise<any> {
+    return this.request<any>(
+      `/api/admin/forms/${formId}/export?format=${format}`,
+    );
   }
 
   // Legacy endpoints (for backward compatibility)
   async getLegacyForm(): Promise<any> {
-    return this.request<any>('/api/form');
+    return this.request<any>("/api/form");
   }
 
   async submitLegacyForm(data: any): Promise<any> {
-    return this.request<any>('/api/submit', {
-      method: 'POST',
+    return this.request<any>("/api/submit", {
+      method: "POST",
       body: JSON.stringify(data),
     });
   }
@@ -260,19 +267,24 @@ export const api = {
   getForms: () => apiClient.listForms(),
   getForm: (id: string) => apiClient.getForm(id),
   createForm: (form: any) => apiClient.createForm(form),
-  submitFormResponse: (formId: string, responses: any) => 
-    apiClient.submitForm(formId, { answers: Object.entries(responses).map(([key, value]) => ({ question_id: key, value })) })
+  submitFormResponse: (formId: string, responses: any) =>
+    apiClient.submitForm(formId, {
+      answers: Object.entries(responses).map(([key, value]) => ({
+        question_id: key,
+        value,
+      })),
+    }),
 };
 
 // Helper function to check if user is authenticated
 export function isAuthenticated(): boolean {
-  if (typeof localStorage === 'undefined') return false;
-  return localStorage.getItem('auth_token') !== null;
+  if (typeof localStorage === "undefined") return false;
+  return localStorage.getItem("auth_token") !== null;
 }
 
 // Helper function to require authentication
 export function requireAuth(): void {
   if (!isAuthenticated()) {
-    window.location.href = '/admin/login';
+    window.location.href = "/admin/login";
   }
 }

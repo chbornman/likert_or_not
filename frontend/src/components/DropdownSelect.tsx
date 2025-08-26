@@ -1,12 +1,12 @@
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 
 interface DropdownSelectProps {
   questionId: string;
@@ -29,7 +29,7 @@ export default function DropdownSelect({
   comment,
   allowComment,
   isRequired,
-  placeholder = 'Select an option',
+  placeholder = "Select an option",
   onChange,
   onCommentChange,
 }: DropdownSelectProps) {
@@ -41,8 +41,8 @@ export default function DropdownSelect({
           {isRequired && <span className="text-red-500 ml-1">*</span>}
         </Label>
       </div>
-      
-      <Select value={value || ''} onValueChange={onChange}>
+
+      <Select value={value || ""} onValueChange={onChange}>
         <SelectTrigger id={questionId}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
@@ -57,12 +57,15 @@ export default function DropdownSelect({
 
       {allowComment && (
         <div className="mt-4">
-          <Label htmlFor={`${questionId}-comment`} className="text-sm text-gray-600">
+          <Label
+            htmlFor={`${questionId}-comment`}
+            className="text-sm text-gray-600"
+          >
             Additional comments (optional)
           </Label>
           <Textarea
             id={`${questionId}-comment`}
-            value={comment || ''}
+            value={comment || ""}
             onChange={(e) => onCommentChange?.(e.target.value)}
             placeholder="Add any additional comments here..."
             className="mt-1"

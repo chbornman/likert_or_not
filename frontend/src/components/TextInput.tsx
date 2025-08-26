@@ -17,7 +17,7 @@ export default function TextInput({
   placeholder,
   maxLength,
   helpText,
-  type = 'text',
+  type = "text",
 }: TextInputProps) {
   return (
     <div className="mb-6">
@@ -25,11 +25,9 @@ export default function TextInput({
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
-      
-      {helpText && (
-        <p className="text-sm text-gray-600 mb-2">{helpText}</p>
-      )}
-      
+
+      {helpText && <p className="text-sm text-gray-600 mb-2">{helpText}</p>}
+
       <input
         type={type}
         value={value}
@@ -39,7 +37,7 @@ export default function TextInput({
         maxLength={maxLength}
         required={required}
       />
-      
+
       {maxLength && (
         <p className="text-xs text-gray-500 mt-1">
           {value.length}/{maxLength} characters

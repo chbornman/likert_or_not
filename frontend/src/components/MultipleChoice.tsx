@@ -1,6 +1,6 @@
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface MultipleChoiceProps {
   questionId: string;
@@ -33,14 +33,14 @@ export default function MultipleChoice({
           {isRequired && <span className="text-red-500 ml-1">*</span>}
         </Label>
       </div>
-      
-      <RadioGroup value={value || ''} onValueChange={onChange}>
+
+      <RadioGroup value={value || ""} onValueChange={onChange}>
         <div className="space-y-2">
           {options.map((option, index) => (
             <div key={index} className="flex items-center space-x-2">
               <RadioGroupItem value={option} id={`${questionId}-${index}`} />
-              <Label 
-                htmlFor={`${questionId}-${index}`} 
+              <Label
+                htmlFor={`${questionId}-${index}`}
                 className="font-normal cursor-pointer"
               >
                 {option}
@@ -52,12 +52,15 @@ export default function MultipleChoice({
 
       {allowComment && (
         <div className="mt-4">
-          <Label htmlFor={`${questionId}-comment`} className="text-sm text-gray-600">
+          <Label
+            htmlFor={`${questionId}-comment`}
+            className="text-sm text-gray-600"
+          >
             Additional comments (optional)
           </Label>
           <Textarea
             id={`${questionId}-comment`}
-            value={comment || ''}
+            value={comment || ""}
             onChange={(e) => onCommentChange?.(e.target.value)}
             placeholder="Add any additional comments here..."
             className="mt-1"

@@ -1,7 +1,19 @@
 export interface Question {
   id: string;
   question_text: string;
-  question_type?: 'likert' | 'text' | 'textarea' | 'multiple_choice' | 'checkbox' | 'dropdown' | 'yes_no' | 'rating' | 'number' | 'date' | 'time' | 'datetime';
+  question_type?:
+    | "likert"
+    | "text"
+    | "textarea"
+    | "multiple_choice"
+    | "checkbox"
+    | "dropdown"
+    | "yes_no"
+    | "rating"
+    | "number"
+    | "date"
+    | "time"
+    | "datetime";
   is_required: boolean;
   allow_comment: boolean;
   position: number;
@@ -13,7 +25,7 @@ export interface Question {
   min?: number; // For number and rating types
   max?: number; // For number and rating types
   step?: number; // For number type
-  ratingStyle?: 'stars' | 'numbers'; // For rating type
+  ratingStyle?: "stars" | "numbers"; // For rating type
   dateFormat?: string; // For date/time types
 }
 

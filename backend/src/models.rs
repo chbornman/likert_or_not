@@ -112,27 +112,27 @@ impl SubmitFormRequest {
         if self.respondent_name.trim().is_empty() {
             return Err("Name is required".to_string());
         }
-        
+
         if self.respondent_email.trim().is_empty() {
             return Err("Email is required".to_string());
         }
-        
+
         // Basic email validation
         if !self.respondent_email.contains('@') || !self.respondent_email.contains('.') {
             return Err("Invalid email address".to_string());
         }
-        
+
         if self.answers.is_empty() {
             return Err("No answers provided".to_string());
         }
-        
+
         Ok(())
     }
-    
+
     /// Generate email hash for duplicate checking
     /// In production, use a proper cryptographic hash with salt
     pub fn email_hash(&self) -> String {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(self.respondent_email.to_lowercase().trim());
         hasher.update(b"likert-form-salt"); // Simple salt for now

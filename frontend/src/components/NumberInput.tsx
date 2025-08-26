@@ -1,6 +1,6 @@
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface NumberInputProps {
   questionId: string;
@@ -27,13 +27,13 @@ export default function NumberInput({
   min,
   max,
   step = 1,
-  placeholder = 'Enter a number',
+  placeholder = "Enter a number",
   onChange,
   onCommentChange,
 }: NumberInputProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    if (val === '') {
+    if (val === "") {
       onChange(undefined);
     } else {
       const numVal = parseFloat(val);
@@ -55,16 +55,16 @@ export default function NumberInput({
             {min !== undefined && max !== undefined
               ? `Enter a value between ${min} and ${max}`
               : min !== undefined
-              ? `Minimum value: ${min}`
-              : `Maximum value: ${max}`}
+                ? `Minimum value: ${min}`
+                : `Maximum value: ${max}`}
           </p>
         )}
       </div>
-      
+
       <Input
         id={questionId}
         type="number"
-        value={value ?? ''}
+        value={value ?? ""}
         onChange={handleChange}
         min={min}
         max={max}
@@ -76,12 +76,15 @@ export default function NumberInput({
 
       {allowComment && (
         <div className="mt-4">
-          <Label htmlFor={`${questionId}-comment`} className="text-sm text-gray-600">
+          <Label
+            htmlFor={`${questionId}-comment`}
+            className="text-sm text-gray-600"
+          >
             Additional comments (optional)
           </Label>
           <Textarea
             id={`${questionId}-comment`}
-            value={comment || ''}
+            value={comment || ""}
             onChange={(e) => onCommentChange?.(e.target.value)}
             placeholder="Add any additional comments here..."
             className="mt-1"

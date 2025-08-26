@@ -30,11 +30,9 @@ export default function TextAreaInput({
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
-      
-      {helpText && (
-        <p className="text-sm text-gray-600 mb-2">{helpText}</p>
-      )}
-      
+
+      {helpText && <p className="text-sm text-gray-600 mb-2">{helpText}</p>}
+
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -44,19 +42,21 @@ export default function TextAreaInput({
         rows={rows}
         required={required}
       />
-      
+
       {maxLength && (
         <div className="mt-1">
           <div className="flex justify-between items-center">
             <div className="w-full bg-gray-200 rounded-full h-1 mr-3">
               <div
                 className={`h-1 rounded-full transition-all ${
-                  isNearLimit ? 'bg-stone-400' : 'bg-cambridge-blue'
+                  isNearLimit ? "bg-stone-400" : "bg-cambridge-blue"
                 }`}
                 style={{ width: `${Math.min(charPercentage, 100)}%` }}
               />
             </div>
-            <span className={`text-xs ${isNearLimit ? 'text-stone-600' : 'text-gray-500'}`}>
+            <span
+              className={`text-xs ${isNearLimit ? "text-stone-600" : "text-gray-500"}`}
+            >
               {charCount}/{charLimit}
             </span>
           </div>

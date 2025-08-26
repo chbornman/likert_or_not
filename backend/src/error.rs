@@ -11,25 +11,25 @@ use thiserror::Error;
 pub enum AppError {
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
-    
+
     #[error("Database error: {0}")]
     DatabaseError(String),
-    
+
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
-    
+
     #[error("Bad request: {0}")]
     BadRequest(String),
-    
+
     #[error("Not found: {0}")]
     NotFound(String),
-    
+
     #[error("Validation error: {0}")]
     ValidationError(String),
-    
+
     #[error("Internal server error: {0}")]
     InternalError(String),
-    
+
     #[error("Internal server error")]
     InternalServerError,
 }
@@ -47,25 +47,18 @@ impl IntoResponse for AppError {
                 tracing::error!("Database error: {}", msg);
                 (StatusCode::INTERNAL_SERVER_ERROR, msg.clone())
             }
-            AppError::Unauthorized(ref msg) => {
-                (StatusCode::UNAUTHORIZED, msg.clone())
-            }
-            AppError::BadRequest(ref msg) => {
-                (StatusCode::BAD_REQUEST, msg.clone())
-            }
-            AppError::NotFound(ref msg) => {
-                (StatusCode::NOT_FOUND, msg.clone())
-            }
-            AppError::ValidationError(ref msg) => {
-                (StatusCode::BAD_REQUEST, msg.clone())
-            }
+            AppError::Unauthorized(ref msg) => (StatusCode::UNAUTHORIZED, msg.clone()),
+            AppError::BadRequest(ref msg) => (StatusCode::BAD_REQUEST, msg.clone()),
+            AppError::NotFound(ref msg) => (StatusCode::NOT_FOUND, msg.clone()),
+            AppError::ValidationError(ref msg) => (StatusCode::BAD_REQUEST, msg.clone()),
             AppError::InternalError(ref msg) => {
                 tracing::error!("Internal error: {}", msg);
                 (StatusCode::INTERNAL_SERVER_ERROR, msg.clone())
             }
-            AppError::InternalServerError => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
-            }
+            AppError::InternalServerError => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error".to_string(),
+            ),
         };
 
         let body = Json(json!({

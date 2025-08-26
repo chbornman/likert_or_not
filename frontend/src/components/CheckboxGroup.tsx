@@ -1,6 +1,6 @@
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface CheckboxGroupProps {
   questionId: string;
@@ -29,7 +29,7 @@ export default function CheckboxGroup({
     if (checked) {
       onChange([...value, option]);
     } else {
-      onChange(value.filter(v => v !== option));
+      onChange(value.filter((v) => v !== option));
     }
   };
 
@@ -42,17 +42,19 @@ export default function CheckboxGroup({
         </Label>
         <p className="text-sm text-gray-500 mt-1">Select all that apply</p>
       </div>
-      
+
       <div className="space-y-2">
         {options.map((option, index) => (
           <div key={index} className="flex items-center space-x-2">
             <Checkbox
               id={`${questionId}-${index}`}
               checked={value.includes(option)}
-              onCheckedChange={(checked) => handleCheckChange(option, checked as boolean)}
+              onCheckedChange={(checked) =>
+                handleCheckChange(option, checked as boolean)
+              }
             />
-            <Label 
-              htmlFor={`${questionId}-${index}`} 
+            <Label
+              htmlFor={`${questionId}-${index}`}
               className="font-normal cursor-pointer"
             >
               {option}
@@ -63,12 +65,15 @@ export default function CheckboxGroup({
 
       {allowComment && (
         <div className="mt-4">
-          <Label htmlFor={`${questionId}-comment`} className="text-sm text-gray-600">
+          <Label
+            htmlFor={`${questionId}-comment`}
+            className="text-sm text-gray-600"
+          >
             Additional comments (optional)
           </Label>
           <Textarea
             id={`${questionId}-comment`}
-            value={comment || ''}
+            value={comment || ""}
             onChange={(e) => onCommentChange?.(e.target.value)}
             placeholder="Add any additional comments here..."
             className="mt-1"

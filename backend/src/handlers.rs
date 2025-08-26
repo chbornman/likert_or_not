@@ -9,39 +9,47 @@ use serde::Deserialize;
 use serde_json::{json, Value as JsonValue};
 use uuid::Uuid;
 
-use crate::{
-    AppState,
-    error::AppError,
-    models::*,
-};
+use crate::{error::AppError, models::*, AppState};
 
 /// List all forms (including archived)
-pub async fn list_forms(
-    State(state): State<AppState>,
-) -> Result<impl IntoResponse, AppError> {
-    let forms: Vec<(String, String, Option<String>, Option<String>, String, String, String)> = sqlx::query_as(
+#[allow(clippy::type_complexity)]
+pub async fn list_forms(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
+    let forms: Vec<(
+        String,
+        String,
+        Option<String>,
+        Option<String>,
+        String,
+        String,
+        String,
+    )> = sqlx::query_as(
         r#"
         SELECT id, title, description, instructions, status, created_at, updated_at
         FROM forms
         ORDER BY updated_at DESC
-        "#
+        "#,
     )
     .fetch_all(&state.db)
     .await
-    .map_err(|e| AppError::Database(e))?;
-    
-    let forms_json: Vec<JsonValue> = forms.into_iter().map(|(id, title, desc, instructions, status, created_at, updated_at)| {
-        json!({
-            "id": id,
-            "title": title,
-            "description": desc,
-            "instructions": instructions,
-            "status": status,
-            "created_at": created_at,
-            "updated_at": updated_at
-        })
-    }).collect();
-    
+    .map_err(AppError::Database)?;
+
+    let forms_json: Vec<JsonValue> = forms
+        .into_iter()
+        .map(
+            |(id, title, desc, instructions, status, created_at, updated_at)| {
+                json!({
+                    "id": id,
+                    "title": title,
+                    "description": desc,
+                    "instructions": instructions,
+                    "status": status,
+                    "created_at": created_at,
+                    "updated_at": updated_at
+                })
+            },
+        )
+        .collect();
+
     Ok(Json(forms_json))
 }
 
@@ -61,9 +69,19 @@ pub async fn get_form(
     .bind(&form_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| AppError::Database(e))?;
+    .map_err(AppError::Database)?;
 
-    if let Some((id, title, desc, instructions, status, welcome_message, closing_message, settings)) = form {
+    if let Some((
+        id,
+        title,
+        desc,
+        instructions,
+        status,
+        welcome_message,
+        closing_message,
+        settings,
+    )) = form
+    {
         // Fetch sections
         let sections: Vec<(String, String, String, Option<String>, i32)> = sqlx::query_as(
             r#"
@@ -71,27 +89,34 @@ pub async fn get_form(
             FROM sections
             WHERE form_id = ?
             ORDER BY position
-            "#
+            "#,
         )
         .bind(&form_id)
         .fetch_all(&state.db)
         .await
-        .map_err(|e| AppError::Database(e))?;
+        .map_err(AppError::Database)?;
 
         // Fetch questions
-        let questions: Vec<(String, Option<String>, i32, String, String, Option<String>, JsonValue)> = 
-            sqlx::query_as(
-                r#"
+        let questions: Vec<(
+            String,
+            Option<String>,
+            i32,
+            String,
+            String,
+            Option<String>,
+            JsonValue,
+        )> = sqlx::query_as(
+            r#"
                 SELECT id, section_id, position, type, title, description, features
                 FROM questions
                 WHERE form_id = ?
                 ORDER BY position
-                "#
-            )
-            .bind(&form_id)
-            .fetch_all(&state.db)
-            .await
-            .map_err(|e| AppError::Database(e))?;
+                "#,
+        )
+        .bind(&form_id)
+        .fetch_all(&state.db)
+        .await
+        .map_err(AppError::Database)?;
 
         // Build sections with questions
         let mut sections_with_questions = Vec::new();
@@ -110,7 +135,7 @@ pub async fn get_form(
                     })
                 })
                 .collect();
-            
+
             sections_with_questions.push(json!({
                 "id": s_id,
                 "title": s_title,
@@ -143,70 +168,65 @@ pub async fn submit_form_with_privacy(
     Json(req): Json<SubmitFormRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     // Validate request
-    req.validate()
-        .map_err(|e| AppError::BadRequest(e))?;
-    
+    req.validate().map_err(AppError::BadRequest)?;
+
     // Generate email hash for duplicate checking
     let email_hash = req.email_hash();
-    
+
     // Start transaction
-    let mut tx = state.db.begin().await
-        .map_err(|e| AppError::Database(e))?;
-    
+    let mut tx = state.db.begin().await.map_err(AppError::Database)?;
+
     // Check for duplicate submission
-    let existing: Option<(String,)> = sqlx::query_as(
-        "SELECT id FROM respondents WHERE email_hash = ?"
-    )
-    .bind(&email_hash)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(|e| AppError::Database(e))?;
-    
+    let existing: Option<(String,)> =
+        sqlx::query_as("SELECT id FROM respondents WHERE email_hash = ?")
+            .bind(&email_hash)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(AppError::Database)?;
+
     // Get or create respondent
     let respondent_id = if let Some((id,)) = existing {
         // Check if they already submitted for this form
         let already_submitted: Option<(i64,)> = sqlx::query_as(
-            "SELECT COUNT(*) FROM responses WHERE respondent_id = ? AND form_id = ?"
+            "SELECT COUNT(*) FROM responses WHERE respondent_id = ? AND form_id = ?",
         )
         .bind(&id)
         .bind(&form_id)
         .fetch_optional(&mut *tx)
         .await
-        .map_err(|e| AppError::Database(e))?;
-        
+        .map_err(AppError::Database)?;
+
         if let Some((count,)) = already_submitted {
             if count > 0 {
                 return Err(AppError::BadRequest(
-                    "You have already submitted a response for this form".to_string()
+                    "You have already submitted a response for this form".to_string(),
                 ));
             }
         }
-        
+
         id
     } else {
         // Create new respondent
         let new_id = Uuid::new_v4().to_string();
-        sqlx::query(
-            "INSERT INTO respondents (id, name, email, email_hash) VALUES (?, ?, ?, ?)"
-        )
-        .bind(&new_id)
-        .bind(&req.respondent_name)
-        .bind(&req.respondent_email)
-        .bind(&email_hash)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| AppError::Database(e))?;
-        
+        sqlx::query("INSERT INTO respondents (id, name, email, email_hash) VALUES (?, ?, ?, ?)")
+            .bind(&new_id)
+            .bind(&req.respondent_name)
+            .bind(&req.respondent_email)
+            .bind(&email_hash)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::Database)?;
+
         new_id
     };
-    
+
     // Create response (without PII)
     let response_id = Uuid::new_v4().to_string();
     sqlx::query(
         r#"
         INSERT INTO responses (id, respondent_id, form_id, role, metadata)
         VALUES (?, ?, ?, ?, ?)
-        "#
+        "#,
     )
     .bind(&response_id)
     .bind(&respondent_id)
@@ -215,8 +235,8 @@ pub async fn submit_form_with_privacy(
     .bind(json!({}))
     .execute(&mut *tx)
     .await
-    .map_err(|e| AppError::Database(e))?;
-    
+    .map_err(AppError::Database)?;
+
     // Insert answers
     for answer in req.answers {
         let answer_id = Uuid::new_v4().to_string();
@@ -224,7 +244,7 @@ pub async fn submit_form_with_privacy(
             r#"
             INSERT INTO answers (id, response_id, question_id, value)
             VALUES (?, ?, ?, ?)
-            "#
+            "#,
         )
         .bind(&answer_id)
         .bind(&response_id)
@@ -232,17 +252,19 @@ pub async fn submit_form_with_privacy(
         .bind(&answer.value)
         .execute(&mut *tx)
         .await
-        .map_err(|e| AppError::Database(e))?;
+        .map_err(AppError::Database)?;
     }
-    
+
     // Commit transaction
-    tx.commit().await
-        .map_err(|e| AppError::Database(e))?;
-    
-    Ok((StatusCode::CREATED, Json(json!({ 
-        "id": response_id,
-        "message": "Response submitted successfully"
-    }))))
+    tx.commit().await.map_err(AppError::Database)?;
+
+    Ok((
+        StatusCode::CREATED,
+        Json(json!({
+            "id": response_id,
+            "message": "Response submitted successfully"
+        })),
+    ))
 }
 
 /// Check if an email has already submitted a response for a form
@@ -251,17 +273,18 @@ pub async fn check_existing_submission(
     State(state): State<AppState>,
     Json(req): Json<serde_json::Value>,
 ) -> Result<impl IntoResponse, AppError> {
-    let email = req.get("email")
+    let email = req
+        .get("email")
         .and_then(|e| e.as_str())
         .ok_or_else(|| AppError::BadRequest("Email is required".to_string()))?;
-    
+
     // Generate email hash
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();
     hasher.update(email.to_lowercase().trim());
     hasher.update(b"likert-form-salt");
     let email_hash = format!("{:x}", hasher.finalize());
-    
+
     // Check if this email has already submitted for this form
     let result: Option<(i64,)> = sqlx::query_as(
         r#"
@@ -269,16 +292,16 @@ pub async fn check_existing_submission(
         FROM responses r
         JOIN respondents res ON res.id = r.respondent_id
         WHERE res.email_hash = ? AND r.form_id = ?
-        "#
+        "#,
     )
     .bind(&email_hash)
     .bind(&form_id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| AppError::Database(e))?;
-    
+    .map_err(AppError::Database)?;
+
     let has_submitted = result.map(|(count,)| count > 0).unwrap_or(false);
-    
+
     Ok(Json(json!({
         "has_submitted": has_submitted,
         "message": if has_submitted {
@@ -295,14 +318,12 @@ pub async fn get_form_stats_anonymous(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
     // Get total responses
-    let total: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM responses WHERE form_id = ?"
-    )
-    .bind(&form_id)
-    .fetch_one(&state.db)
-    .await
-    .map_err(|e| AppError::Database(e))?;
-    
+    let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM responses WHERE form_id = ?")
+        .bind(&form_id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(AppError::Database)?;
+
     // Get role distribution
     let role_distribution: Vec<RoleCount> = sqlx::query_as(
         r#"
@@ -311,13 +332,13 @@ pub async fn get_form_stats_anonymous(
         WHERE form_id = ?
         GROUP BY role
         ORDER BY count DESC
-        "#
+        "#,
     )
     .bind(&form_id)
     .fetch_all(&state.db)
     .await
-    .map_err(|e| AppError::Database(e))?;
-    
+    .map_err(AppError::Database)?;
+
     // Get question statistics
     let question_stats_raw: Vec<(String, String, i64, Option<f64>)> = sqlx::query_as(
         r#"
@@ -342,8 +363,8 @@ pub async fn get_form_stats_anonymous(
     .bind(&form_id)
     .fetch_all(&state.db)
     .await
-    .map_err(|e| AppError::Database(e))?;
-    
+    .map_err(AppError::Database)?;
+
     // Convert to proper structure
     let mut question_stats = Vec::new();
     for (q_id, q_title, count, avg) in question_stats_raw {
@@ -368,8 +389,8 @@ pub async fn get_form_stats_anonymous(
         .bind(&form_id)
         .fetch_all(&state.db)
         .await
-        .map_err(|e| AppError::Database(e))?;
-        
+        .map_err(AppError::Database)?;
+
         question_stats.push(QuestionStat {
             question_id: q_id,
             question_title: q_title,
@@ -378,7 +399,7 @@ pub async fn get_form_stats_anonymous(
             rating_distribution: rating_dist,
         });
     }
-    
+
     Ok(Json(AnonymousStats {
         form_id,
         total_responses: total.0,
@@ -394,9 +415,15 @@ pub async fn get_responses_with_pii(
     // Add auth check here in production
 ) -> Result<impl IntoResponse, AppError> {
     // Fetch responses with PII joined
-    let responses_raw: Vec<(String, String, Option<String>, Option<String>, Option<String>, String)> = 
-        sqlx::query_as(
-            r#"
+    let responses_raw: Vec<(
+        String,
+        String,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        String,
+    )> = sqlx::query_as(
+        r#"
             SELECT 
                 r.id,
                 r.form_id,
@@ -408,15 +435,15 @@ pub async fn get_responses_with_pii(
             LEFT JOIN respondents res ON res.id = r.respondent_id
             WHERE r.form_id = ?
             ORDER BY r.submitted_at DESC
-            "#
-        )
-        .bind(&form_id)
-        .fetch_all(&state.db)
-        .await
-        .map_err(|e| AppError::Database(e))?;
-    
+            "#,
+    )
+    .bind(&form_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(AppError::Database)?;
+
     let mut responses = Vec::new();
-    
+
     for (id, form_id, name, email, role, submitted_at) in responses_raw {
         // Get answers for this response
         // Fetch as raw strings first, then parse JSON
@@ -430,30 +457,30 @@ pub async fn get_responses_with_pii(
             JOIN questions q ON q.id = a.question_id
             WHERE a.response_id = ?
             ORDER BY q.position
-            "#
+            "#,
         )
         .bind(&id)
         .fetch_all(&state.db)
         .await
-        .map_err(|e| AppError::Database(e))?;
-        
+        .map_err(AppError::Database)?;
+
         let answers: Vec<(String, String, JsonValue)> = answers_raw
             .into_iter()
             .map(|(q_id, title, value_str)| {
-                let value: JsonValue = serde_json::from_str(&value_str)
-                    .unwrap_or(JsonValue::Null);
+                let value: JsonValue = serde_json::from_str(&value_str).unwrap_or(JsonValue::Null);
                 (q_id, title, value)
             })
             .collect();
-        
-        let answers_formatted = answers.into_iter().map(|(q_id, q_title, value)| {
-            AnswerWithQuestion {
+
+        let answers_formatted = answers
+            .into_iter()
+            .map(|(q_id, q_title, value)| AnswerWithQuestion {
                 question_id: q_id,
                 question_title: q_title,
                 value,
-            }
-        }).collect();
-        
+            })
+            .collect();
+
         responses.push(ResponseWithPII {
             id,
             form_id,
@@ -464,7 +491,7 @@ pub async fn get_responses_with_pii(
             answers: answers_formatted,
         });
     }
-    
+
     Ok(Json(responses))
 }
 
@@ -475,9 +502,14 @@ pub async fn get_form_respondents(
     // Add auth check here in production
 ) -> Result<impl IntoResponse, AppError> {
     // Fetch respondents who submitted to this form
-    let respondents: Vec<(String, Option<String>, Option<String>, Option<String>, String)> = 
-        sqlx::query_as(
-            r#"
+    let respondents: Vec<(
+        String,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        String,
+    )> = sqlx::query_as(
+        r#"
             SELECT DISTINCT
                 res.id,
                 res.name,
@@ -488,13 +520,13 @@ pub async fn get_form_respondents(
             LEFT JOIN respondents res ON res.id = r.respondent_id
             WHERE r.form_id = ?
             ORDER BY r.submitted_at DESC
-            "#
-        )
-        .bind(&form_id)
-        .fetch_all(&state.db)
-        .await
-        .map_err(|e| AppError::Database(e))?;
-    
+            "#,
+    )
+    .bind(&form_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(AppError::Database)?;
+
     let respondent_list: Vec<_> = respondents
         .into_iter()
         .map(|(id, name, email, role, submitted_at)| {
@@ -507,7 +539,7 @@ pub async fn get_form_respondents(
             })
         })
         .collect();
-    
+
     Ok(Json(json!({
         "respondents": respondent_list,
         "total": respondent_list.len()
@@ -521,18 +553,16 @@ pub async fn delete_respondent_pii(
     // Add auth check here in production
 ) -> Result<impl IntoResponse, AppError> {
     // This deletes the PII but keeps the anonymous response data
-    let result = sqlx::query(
-        "DELETE FROM respondents WHERE id = ?"
-    )
-    .bind(&respondent_id)
-    .execute(&state.db)
-    .await
-    .map_err(|e| AppError::Database(e))?;
-    
+    let result = sqlx::query("DELETE FROM respondents WHERE id = ?")
+        .bind(&respondent_id)
+        .execute(&state.db)
+        .await
+        .map_err(AppError::Database)?;
+
     if result.rows_affected() == 0 {
         return Err(AppError::BadRequest("Respondent not found".to_string()));
     }
-    
+
     Ok(Json(json!({
         "message": "PII deleted successfully",
         "note": "Response data remains anonymous in the system"
@@ -639,7 +669,7 @@ pub async fn get_admin_stats(
     if params.token != state.admin_token {
         return Err(AppError::Unauthorized("Invalid admin token".to_string()));
     }
-    
+
     // Get stats for specific form
     get_form_stats_anonymous(Path(params.form_id), State(state)).await
 }
@@ -653,11 +683,10 @@ pub async fn get_admin_responses(
     if params.token != state.admin_token {
         return Err(AppError::Unauthorized("Invalid admin token".to_string()));
     }
-    
+
     // Fetch responses WITHOUT PII
-    let responses_raw: Vec<(String, String, Option<String>, String)> = 
-        sqlx::query_as(
-            r#"
+    let responses_raw: Vec<(String, String, Option<String>, String)> = sqlx::query_as(
+        r#"
             SELECT 
                 r.id,
                 r.form_id,
@@ -666,15 +695,15 @@ pub async fn get_admin_responses(
             FROM responses r
             WHERE r.form_id = ?
             ORDER BY r.submitted_at DESC
-            "#
-        )
-        .bind(&params.form_id)
-        .fetch_all(&state.db)
-        .await
-        .map_err(|e| AppError::Database(e))?;
-    
+            "#,
+    )
+    .bind(&params.form_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(AppError::Database)?;
+
     let mut responses = Vec::new();
-    
+
     for (id, form_id, role, submitted_at) in responses_raw {
         // Get answers for this response
         let answers_raw: Vec<(String, String, String)> = sqlx::query_as(
@@ -687,18 +716,18 @@ pub async fn get_admin_responses(
             JOIN questions q ON q.id = a.question_id
             WHERE a.response_id = ?
             ORDER BY q.position
-            "#
+            "#,
         )
         .bind(&id)
         .fetch_all(&state.db)
         .await
-        .map_err(|e| AppError::Database(e))?;
-        
+        .map_err(AppError::Database)?;
+
         let answers: Vec<_> = answers_raw
             .into_iter()
             .map(|(q_id, title, value_str)| {
-                let value: serde_json::Value = serde_json::from_str(&value_str)
-                    .unwrap_or(serde_json::Value::Null);
+                let value: serde_json::Value =
+                    serde_json::from_str(&value_str).unwrap_or(serde_json::Value::Null);
                 json!({
                     "question_id": q_id,
                     "question_title": title,
@@ -706,7 +735,7 @@ pub async fn get_admin_responses(
                 })
             })
             .collect();
-        
+
         responses.push(json!({
             "id": id,
             "form_id": form_id,
@@ -716,7 +745,7 @@ pub async fn get_admin_responses(
             "completed": true  // All submitted responses are considered complete
         }));
     }
-    
+
     Ok(Json(responses))
 }
 
@@ -742,61 +771,64 @@ pub async fn import_form(
             }
         }
     }
-    
+
     // Validate unique section IDs within the form
     let mut section_ids = std::collections::HashSet::new();
     for section in &form_data.sections {
         if !section_ids.insert(section.id.clone()) {
-            return Err(AppError::BadRequest(
-                format!("Duplicate section ID found: '{}'. All section IDs must be unique within a form.", section.id)
-            ));
+            return Err(AppError::BadRequest(format!(
+                "Duplicate section ID found: '{}'. All section IDs must be unique within a form.",
+                section.id
+            )));
         }
     }
 
     // Start a transaction
-    let mut tx = state.db.begin().await.map_err(|e| AppError::Database(e))?;
+    let mut tx = state.db.begin().await.map_err(AppError::Database)?;
 
     // Check if form with this ID already exists
-    let existing: Option<(String,)> = sqlx::query_as(
-        "SELECT id FROM forms WHERE id = ?"
-    )
-    .bind(&form_data.id)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(|e| AppError::Database(e))?;
+    let existing: Option<(String,)> = sqlx::query_as("SELECT id FROM forms WHERE id = ?")
+        .bind(&form_data.id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(AppError::Database)?;
 
-    if existing.is_some() {
-        // Delete existing form and all related data
-        sqlx::query("DELETE FROM answers WHERE response_id IN (SELECT id FROM responses WHERE form_id = ?)")
-            .bind(&form_data.id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| AppError::Database(e))?;
+    let has_conflict = existing.is_some();
+    let (final_form_id, section_id_map, question_id_map) = if has_conflict {
+        // Form ID conflict - generate new IDs for everything
+        let new_form_id = Uuid::new_v4().to_string();
 
-        sqlx::query("DELETE FROM responses WHERE form_id = ?")
-            .bind(&form_data.id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| AppError::Database(e))?;
+        // Create mappings for section and question IDs
+        let mut section_id_map = std::collections::HashMap::new();
+        let mut question_id_map = std::collections::HashMap::new();
 
-        sqlx::query("DELETE FROM questions WHERE form_id = ?")
-            .bind(&form_data.id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| AppError::Database(e))?;
+        for section in &form_data.sections {
+            let new_section_id = Uuid::new_v4().to_string();
+            section_id_map.insert(section.id.clone(), new_section_id);
 
-        sqlx::query("DELETE FROM sections WHERE form_id = ?")
-            .bind(&form_data.id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| AppError::Database(e))?;
+            for question in &section.questions {
+                let new_question_id = Uuid::new_v4().to_string();
+                question_id_map.insert(question.id.clone(), new_question_id);
+            }
+        }
 
-        sqlx::query("DELETE FROM forms WHERE id = ?")
-            .bind(&form_data.id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| AppError::Database(e))?;
-    }
+        (new_form_id, section_id_map, question_id_map)
+    } else {
+        // No conflict - use original IDs
+        let section_id_map: std::collections::HashMap<String, String> = form_data
+            .sections
+            .iter()
+            .map(|s| (s.id.clone(), s.id.clone()))
+            .collect();
+        let question_id_map: std::collections::HashMap<String, String> = form_data
+            .sections
+            .iter()
+            .flat_map(|s| s.questions.iter())
+            .map(|q| (q.id.clone(), q.id.clone()))
+            .collect();
+
+        (form_data.id.clone(), section_id_map, question_id_map)
+    };
 
     // Insert the form with all fields
     let now = Utc::now();
@@ -805,14 +837,14 @@ pub async fn import_form(
     } else {
         "{}".to_string()
     };
-    
+
     sqlx::query(
         r#"
         INSERT INTO forms (id, title, description, instructions, status, welcome_message, closing_message, settings, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         "#
     )
-    .bind(&form_data.id)
+    .bind(&final_form_id)
     .bind(&form_data.title)
     .bind(&form_data.description)
     .bind(&form_data.instructions)
@@ -824,45 +856,49 @@ pub async fn import_form(
     .bind(now.to_rfc3339())
     .execute(&mut *tx)
     .await
-    .map_err(|e| AppError::Database(e))?;
+    .map_err(AppError::Database)?;
 
     // Insert sections and questions
     let mut global_question_position = 0;
     for section in form_data.sections {
+        let new_section_id = section_id_map.get(&section.id).unwrap();
+
         // Insert section
         sqlx::query(
             r#"
             INSERT INTO sections (id, form_id, title, description, position)
             VALUES (?, ?, ?, ?, ?)
-            "#
+            "#,
         )
-        .bind(&section.id)
-        .bind(&form_data.id)
+        .bind(new_section_id)
+        .bind(&final_form_id)
         .bind(&section.title)
         .bind(&section.description)
         .bind(section.position)
         .execute(&mut *tx)
         .await
-        .map_err(|e| AppError::Database(e))?;
+        .map_err(AppError::Database)?;
 
         // Insert questions for this section
         for question in section.questions {
+            let new_question_id = question_id_map.get(&question.id).unwrap();
+
             // Always use global counter to ensure unique positions across all sections
             global_question_position += 1;
             let position = global_question_position;
-            
+
             // Start with features from the template if provided
             let mut features = if let Some(template_features) = question.features {
                 template_features
             } else {
                 json!({})
             };
-            
+
             // Add/override with explicit fields
             features["required"] = json!(question.is_required);
             features["helpText"] = json!(question.help_text);
             // Only override allowComment if it's not already in features
-            if !features.get("allowComment").is_some() {
+            if features.get("allowComment").is_none() {
                 features["allowComment"] = json!(question.allow_comment);
             }
 
@@ -872,9 +908,9 @@ pub async fn import_form(
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 "#
             )
-            .bind(&question.id)
-            .bind(&form_data.id)
-            .bind(&section.id)
+            .bind(new_question_id)
+            .bind(&final_form_id)
+            .bind(new_section_id)
             .bind(position)
             .bind(&question.question_type)
             .bind(&question.title)
@@ -882,17 +918,24 @@ pub async fn import_form(
             .bind(features.to_string())
             .execute(&mut *tx)
             .await
-            .map_err(|e| AppError::Database(e))?;
+            .map_err(AppError::Database)?;
         }
     }
 
     // Commit the transaction
-    tx.commit().await.map_err(|e| AppError::Database(e))?;
+    tx.commit().await.map_err(AppError::Database)?;
+
+    let message = if has_conflict {
+        "Form imported successfully (new ID generated due to conflict)"
+    } else {
+        "Form imported successfully"
+    };
 
     Ok(Json(json!({
-        "message": "Form imported successfully",
-        "form_id": form_data.id,
-        "title": form_data.title
+        "message": message,
+        "form_id": final_form_id,
+        "title": form_data.title,
+        "id_conflict": has_conflict
     })))
 }
 
@@ -909,16 +952,14 @@ pub async fn update_form(
     }
 
     // Start a transaction
-    let mut tx = state.db.begin().await.map_err(|e| AppError::Database(e))?;
+    let mut tx = state.db.begin().await.map_err(AppError::Database)?;
 
     // Check if form exists
-    let existing: Option<(String,)> = sqlx::query_as(
-        "SELECT id FROM forms WHERE id = ?"
-    )
-    .bind(&form_id)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(|e| AppError::Database(e))?;
+    let existing: Option<(String,)> = sqlx::query_as("SELECT id FROM forms WHERE id = ?")
+        .bind(&form_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(AppError::Database)?;
 
     if existing.is_none() {
         return Err(AppError::BadRequest("Form not found".to_string()));
@@ -931,14 +972,14 @@ pub async fn update_form(
     } else {
         "{}".to_string()
     };
-    
+
     sqlx::query(
         r#"
         UPDATE forms 
         SET title = ?, description = ?, instructions = ?, status = ?, 
             welcome_message = ?, closing_message = ?, settings = ?, updated_at = ?
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(&form_data.title)
     .bind(&form_data.description)
@@ -951,20 +992,20 @@ pub async fn update_form(
     .bind(&form_id)
     .execute(&mut *tx)
     .await
-    .map_err(|e| AppError::Database(e))?;
+    .map_err(AppError::Database)?;
 
     // Delete existing sections and questions (cascade will handle questions)
     sqlx::query("DELETE FROM questions WHERE form_id = ?")
         .bind(&form_id)
         .execute(&mut *tx)
         .await
-        .map_err(|e| AppError::Database(e))?;
+        .map_err(AppError::Database)?;
 
     sqlx::query("DELETE FROM sections WHERE form_id = ?")
         .bind(&form_id)
         .execute(&mut *tx)
         .await
-        .map_err(|e| AppError::Database(e))?;
+        .map_err(AppError::Database)?;
 
     // Re-insert sections and questions
     let mut global_question_position = 0;
@@ -974,7 +1015,7 @@ pub async fn update_form(
             r#"
             INSERT INTO sections (id, form_id, title, description, position)
             VALUES (?, ?, ?, ?, ?)
-            "#
+            "#,
         )
         .bind(&section.id)
         .bind(&form_id)
@@ -983,24 +1024,24 @@ pub async fn update_form(
         .bind(section.position)
         .execute(&mut *tx)
         .await
-        .map_err(|e| AppError::Database(e))?;
+        .map_err(AppError::Database)?;
 
         // Insert questions for this section
         for question in section.questions {
             // Always use global counter to ensure unique positions across all sections
             global_question_position += 1;
             let position = global_question_position;
-            
+
             // Start with features from the request if provided
             let mut features = if let Some(template_features) = question.features {
                 template_features
             } else {
                 json!({})
             };
-            
+
             // Add/override with explicit fields
             features["required"] = json!(question.is_required);
-            
+
             if let Some(allow_comment) = question.allow_comment {
                 features["allowComment"] = json!(allow_comment);
             }
@@ -1033,12 +1074,12 @@ pub async fn update_form(
             .bind(features.to_string())
             .execute(&mut *tx)
             .await
-            .map_err(|e| AppError::Database(e))?;
+            .map_err(AppError::Database)?;
         }
     }
 
     // Commit the transaction
-    tx.commit().await.map_err(|e| AppError::Database(e))?;
+    tx.commit().await.map_err(AppError::Database)?;
 
     Ok(Json(json!({
         "message": "Form updated successfully",
@@ -1058,19 +1099,20 @@ pub async fn clone_form(
     }
 
     // Start a transaction
-    let mut tx = state.db.begin().await.map_err(|e| AppError::Database(e))?;
+    let mut tx = state.db.begin().await.map_err(AppError::Database)?;
 
     // Get the original form
-    let original_form: Option<(String, String, Option<String>, Option<String>, String)> = 
+    let original_form: Option<(String, String, Option<String>, Option<String>, String)> =
         sqlx::query_as(
-            "SELECT id, title, description, instructions, status FROM forms WHERE id = ?"
+            "SELECT id, title, description, instructions, status FROM forms WHERE id = ?",
         )
         .bind(&form_id)
         .fetch_optional(&mut *tx)
         .await
-        .map_err(|e| AppError::Database(e))?;
+        .map_err(AppError::Database)?;
 
-    let original_form = original_form.ok_or_else(|| AppError::BadRequest("Form not found".to_string()))?;
+    let original_form =
+        original_form.ok_or_else(|| AppError::BadRequest("Form not found".to_string()))?;
 
     // Generate new IDs
     let new_form_id = format!("{}-copy-{}", form_id, Utc::now().timestamp());
@@ -1082,7 +1124,7 @@ pub async fn clone_form(
         r#"
         INSERT INTO forms (id, title, description, instructions, status, created_at, updated_at)
         VALUES (?, ?, ?, ?, 'draft', ?, ?)
-        "#
+        "#,
     )
     .bind(&new_form_id)
     .bind(&new_title)
@@ -1092,26 +1134,30 @@ pub async fn clone_form(
     .bind(now.to_rfc3339())
     .execute(&mut *tx)
     .await
-    .map_err(|e| AppError::Database(e))?;
+    .map_err(AppError::Database)?;
 
     // Clone sections
     let sections: Vec<(String, String, Option<String>, i32)> = sqlx::query_as(
-        "SELECT id, title, description, position FROM sections WHERE form_id = ? ORDER BY position"
+        "SELECT id, title, description, position FROM sections WHERE form_id = ? ORDER BY position",
     )
     .bind(&form_id)
     .fetch_all(&mut *tx)
     .await
-    .map_err(|e| AppError::Database(e))?;
+    .map_err(AppError::Database)?;
 
     for (old_section_id, title, description, position) in sections {
-        let new_section_id = format!("{}-{}", old_section_id, Utc::now().timestamp_nanos_opt().unwrap());
-        
+        let new_section_id = format!(
+            "{}-{}",
+            old_section_id,
+            Utc::now().timestamp_nanos_opt().unwrap()
+        );
+
         // Insert cloned section
         sqlx::query(
             r#"
             INSERT INTO sections (id, form_id, title, description, position)
             VALUES (?, ?, ?, ?, ?)
-            "#
+            "#,
         )
         .bind(&new_section_id)
         .bind(&new_form_id)
@@ -1120,7 +1166,7 @@ pub async fn clone_form(
         .bind(position)
         .execute(&mut *tx)
         .await
-        .map_err(|e| AppError::Database(e))?;
+        .map_err(AppError::Database)?;
 
         // Clone questions for this section
         let questions: Vec<(String, i32, String, String, Option<String>, String)> = sqlx::query_as(
@@ -1129,17 +1175,17 @@ pub async fn clone_form(
             FROM questions 
             WHERE form_id = ? AND section_id = ? 
             ORDER BY position
-            "#
+            "#,
         )
         .bind(&form_id)
         .bind(&old_section_id)
         .fetch_all(&mut *tx)
         .await
-        .map_err(|e| AppError::Database(e))?;
+        .map_err(AppError::Database)?;
 
         for (old_q_id, position, q_type, title, description, features) in questions {
             let new_q_id = format!("{}-{}", old_q_id, Utc::now().timestamp_nanos_opt().unwrap());
-            
+
             sqlx::query(
                 r#"
                 INSERT INTO questions (id, form_id, section_id, position, type, title, description, features)
@@ -1156,12 +1202,12 @@ pub async fn clone_form(
             .bind(&features)
             .execute(&mut *tx)
             .await
-            .map_err(|e| AppError::Database(e))?;
+            .map_err(AppError::Database)?;
         }
     }
 
     // Commit the transaction
-    tx.commit().await.map_err(|e| AppError::Database(e))?;
+    tx.commit().await.map_err(AppError::Database)?;
 
     Ok(Json(json!({
         "message": "Form cloned successfully",
@@ -1184,7 +1230,9 @@ pub async fn update_form_status(
 
     // Validate status
     if !["draft", "published", "finished", "archived"].contains(&status_update.status.as_str()) {
-        return Err(AppError::BadRequest("Invalid status. Must be draft, published, finished, or archived".to_string()));
+        return Err(AppError::BadRequest(
+            "Invalid status. Must be draft, published, finished, or archived".to_string(),
+        ));
     }
 
     // Update the form status
@@ -1194,14 +1242,14 @@ pub async fn update_form_status(
         UPDATE forms 
         SET status = ?, updated_at = ?
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(&status_update.status)
     .bind(now.to_rfc3339())
     .bind(&form_id)
     .execute(&state.db)
     .await
-    .map_err(|e| AppError::Database(e))?;
+    .map_err(AppError::Database)?;
 
     if result.rows_affected() == 0 {
         return Err(AppError::BadRequest("Form not found".to_string()));
@@ -1226,62 +1274,61 @@ pub async fn delete_form(
     }
 
     // Start a transaction to ensure all deletions happen atomically
-    let mut tx = state.db.begin().await.map_err(|e| AppError::Database(e))?;
+    let mut tx = state.db.begin().await.map_err(AppError::Database)?;
 
     // Check if form exists and get response count for logging
-    let response_count: Option<(i64,)> = sqlx::query_as(
-        "SELECT COUNT(*) FROM responses WHERE form_id = ?"
-    )
-    .bind(&form_id)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(|e| AppError::Database(e))?;
+    let response_count: Option<(i64,)> =
+        sqlx::query_as("SELECT COUNT(*) FROM responses WHERE form_id = ?")
+            .bind(&form_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(AppError::Database)?;
 
     let count = response_count.map(|c| c.0).unwrap_or(0);
 
     // Delete all answers associated with responses to this form
     sqlx::query(
-        "DELETE FROM answers WHERE response_id IN (SELECT id FROM responses WHERE form_id = ?)"
+        "DELETE FROM answers WHERE response_id IN (SELECT id FROM responses WHERE form_id = ?)",
     )
     .bind(&form_id)
     .execute(&mut *tx)
     .await
-    .map_err(|e| AppError::Database(e))?;
+    .map_err(AppError::Database)?;
 
     // Delete all responses for this form
     sqlx::query("DELETE FROM responses WHERE form_id = ?")
         .bind(&form_id)
         .execute(&mut *tx)
         .await
-        .map_err(|e| AppError::Database(e))?;
+        .map_err(AppError::Database)?;
 
     // Delete all questions for this form
     sqlx::query("DELETE FROM questions WHERE form_id = ?")
         .bind(&form_id)
         .execute(&mut *tx)
         .await
-        .map_err(|e| AppError::Database(e))?;
+        .map_err(AppError::Database)?;
 
     // Delete all sections for this form
     sqlx::query("DELETE FROM sections WHERE form_id = ?")
         .bind(&form_id)
         .execute(&mut *tx)
         .await
-        .map_err(|e| AppError::Database(e))?;
+        .map_err(AppError::Database)?;
 
     // Finally, delete the form itself
     let result = sqlx::query("DELETE FROM forms WHERE id = ?")
         .bind(&form_id)
         .execute(&mut *tx)
         .await
-        .map_err(|e| AppError::Database(e))?;
+        .map_err(AppError::Database)?;
 
     if result.rows_affected() == 0 {
         return Err(AppError::BadRequest("Form not found".to_string()));
     }
 
     // Commit the transaction
-    tx.commit().await.map_err(|e| AppError::Database(e))?;
+    tx.commit().await.map_err(AppError::Database)?;
 
     Ok(Json(json!({
         "message": format!("Form deleted successfully along with {} responses", count),
@@ -1293,13 +1340,13 @@ pub async fn delete_form(
 pub async fn get_form_template() -> Result<impl IntoResponse, AppError> {
     let template_path = std::env::var("TEMPLATE_PATH")
         .unwrap_or_else(|_| "/app/config/form-template.json".to_string());
-    
+
     let template_content = tokio::fs::read_to_string(&template_path)
         .await
         .map_err(|e| AppError::InternalError(format!("Failed to read template file: {}", e)))?;
-    
+
     let template_json: JsonValue = serde_json::from_str(&template_content)
         .map_err(|e| AppError::InternalError(format!("Invalid template JSON: {}", e)))?;
-    
+
     Ok(Json(template_json))
 }

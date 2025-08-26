@@ -8,7 +8,7 @@ pub async fn send_notification(
     respondent_email: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let client = reqwest::Client::new();
-    
+
     let body = json!({
         "from": "Likert Form <onboarding@resend.dev>",
         "to": [to_email],

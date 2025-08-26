@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { mockForm, mockFormList, mockResponses } from "../fixtures/forms";
 
 export const mockHandlers = {
@@ -24,16 +25,16 @@ export const mockHandlers = {
     updated_at: new Date().toISOString()
   }),
   
-  deleteForm: (id: string) => Promise.resolve({ success: true }),
+  deleteForm: (_id: string) => Promise.resolve({ success: true }),
   
-  submitFormResponse: (formId: string, responses: any) => Promise.resolve({
+  submitFormResponse: (_formId: string, _responses: any) => Promise.resolve({
     success: true,
     response_id: `response-${Date.now()}`
   }),
   
-  getFormResponses: (formId: string) => Promise.resolve(mockResponses),
+  getFormResponses: (_formId: string) => Promise.resolve(mockResponses),
   
-  exportFormResponses: (formId: string, format: string) => {
+  exportFormResponses: (_formId: string, _format: string) => {
     const blob = new Blob(["mock export data"], { type: "application/octet-stream" });
     return Promise.resolve(blob);
   },
@@ -59,7 +60,7 @@ export const setupMockAPI = () => {
     const urlString = typeof url === 'string' ? url : url.toString();
     
     if (urlString.includes('/api/forms') && options?.method === 'GET') {
-      if (urlString.match(/\/api\/forms\/[^\/]+$/)) {
+      if (urlString.match(/\/api\/forms\/[^/]+$/)) {
         const id = urlString.split('/').pop();
         const form = await mockHandlers.getForm(id!);
         return new Response(JSON.stringify(form), { status: 200 });

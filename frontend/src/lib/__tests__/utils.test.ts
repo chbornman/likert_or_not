@@ -11,13 +11,13 @@ describe("Utils", () => {
     test("should handle conditional classes", () => {
       const isActive = true;
       const isDisabled = false;
-      
+
       const result = cn(
         "base-class",
         isActive && "active-class",
-        isDisabled && "disabled-class"
+        isDisabled && "disabled-class",
       );
-      
+
       expect(result).toBe("base-class active-class");
     });
 
@@ -27,10 +27,7 @@ describe("Utils", () => {
     });
 
     test("should merge Tailwind classes properly", () => {
-      const result = cn(
-        "text-sm text-red-500",
-        "text-lg text-blue-500"
-      );
+      const result = cn("text-sm text-red-500", "text-lg text-blue-500");
       expect(result).toBe("text-lg text-blue-500");
     });
 

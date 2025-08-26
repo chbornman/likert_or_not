@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Star } from 'lucide-react';
+import { useState } from "react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Star } from "lucide-react";
 
 interface RatingScaleProps {
   questionId: string;
@@ -12,7 +12,7 @@ interface RatingScaleProps {
   isRequired?: boolean;
   min?: number;
   max?: number;
-  ratingStyle?: 'stars' | 'numbers';
+  ratingStyle?: "stars" | "numbers";
   onChange: (value: number) => void;
   onCommentChange?: (comment: string) => void;
 }
@@ -26,7 +26,7 @@ export default function RatingScale({
   isRequired,
   min = 1,
   max = 5,
-  ratingStyle = 'stars',
+  ratingStyle = "stars",
   onChange,
   onCommentChange,
 }: RatingScaleProps) {
@@ -47,9 +47,13 @@ export default function RatingScale({
         >
           <Star
             className={`w-8 h-8 ${
-              (hoveredValue !== null ? rating <= hoveredValue : rating <= (value || 0))
-                ? 'fill-stone-400 text-stone-400'
-                : 'text-gray-300'
+              (
+                hoveredValue !== null
+                  ? rating <= hoveredValue
+                  : rating <= (value || 0)
+              )
+                ? "fill-stone-400 text-stone-400"
+                : "text-gray-300"
             }`}
           />
         </button>
@@ -66,8 +70,8 @@ export default function RatingScale({
           onClick={() => onChange(rating)}
           className={`w-10 h-10 rounded-full border-2 transition-colors ${
             value === rating
-              ? 'bg-cerulean text-white border-cerulean'
-              : 'border-gray-300 hover:border-cambridge-blue'
+              ? "bg-cerulean text-white border-cerulean"
+              : "border-gray-300 hover:border-cambridge-blue"
           }`}
         >
           {rating}
@@ -84,9 +88,9 @@ export default function RatingScale({
           {isRequired && <span className="text-red-500 ml-1">*</span>}
         </Label>
       </div>
-      
+
       <div className="flex items-center gap-4">
-        {ratingStyle === 'stars' ? renderStars() : renderNumbers()}
+        {ratingStyle === "stars" ? renderStars() : renderNumbers()}
         {value && (
           <span className="text-sm text-gray-600">
             {value} / {max}
@@ -96,12 +100,15 @@ export default function RatingScale({
 
       {allowComment && (
         <div className="mt-4">
-          <Label htmlFor={`${questionId}-comment`} className="text-sm text-gray-600">
+          <Label
+            htmlFor={`${questionId}-comment`}
+            className="text-sm text-gray-600"
+          >
             Additional comments (optional)
           </Label>
           <Textarea
             id={`${questionId}-comment`}
-            value={comment || ''}
+            value={comment || ""}
             onChange={(e) => onCommentChange?.(e.target.value)}
             placeholder="Add any additional comments here..."
             className="mt-1"
