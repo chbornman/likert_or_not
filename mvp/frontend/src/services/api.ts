@@ -129,7 +129,9 @@ class ApiClient {
 
   constructor() {
     // Load token from localStorage if available
-    this.token = localStorage.getItem('auth_token');
+    if (typeof localStorage !== 'undefined') {
+      this.token = localStorage.getItem('auth_token');
+    }
   }
 
   private async request<T>(
@@ -166,7 +168,9 @@ class ApiClient {
     });
     
     this.token = response.token;
-    localStorage.setItem('auth_token', response.token);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('auth_token', response.token);
+    }
     
     return response;
   }
@@ -176,7 +180,9 @@ class ApiClient {
       await this.request('/api/auth/logout', { method: 'POST' });
     } finally {
       this.token = null;
-      localStorage.removeItem('auth_token');
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('auth_token');
+      }
     }
   }
 
@@ -249,8 +255,18 @@ class ApiClient {
 // Export singleton instance
 export const apiClient = new ApiClient();
 
+// Export as 'api' for backward compatibility with tests
+export const api = {
+  getForms: () => apiClient.listForms(),
+  getForm: (id: string) => apiClient.getForm(id),
+  createForm: (form: any) => apiClient.createForm(form),
+  submitFormResponse: (formId: string, responses: any) => 
+    apiClient.submitForm(formId, { answers: Object.entries(responses).map(([key, value]) => ({ question_id: key, value })) })
+};
+
 // Helper function to check if user is authenticated
 export function isAuthenticated(): boolean {
+  if (typeof localStorage === 'undefined') return false;
   return localStorage.getItem('auth_token') !== null;
 }
 
