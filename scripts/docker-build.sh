@@ -174,41 +174,126 @@ done
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Backend
-echo -e "${GREEN}=== Backend ===${NC}"
+# Check versions first
+echo -e "${BLUE}=== Checking Versions ===${NC}"
+echo ""
+
+# Get backend version
 cd "$PROJECT_ROOT/backend"
-
-# Extract version from Cargo.toml
 BACKEND_VERSION=$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2)
+echo -e "${YELLOW}Backend current version: ${BACKEND_VERSION}${NC}"
 
-echo -e "${YELLOW}Current version: ${BACKEND_VERSION}${NC}"
+# Get frontend version
+cd "$PROJECT_ROOT/frontend"
+FRONTEND_VERSION=$(grep '"version"' package.json | head -1 | sed -E 's/.*"version": "([^"]+)".*/\1/')
+echo -e "${YELLOW}Frontend current version: ${FRONTEND_VERSION}${NC}"
 
+echo ""
+echo -e "${BLUE}=== Checking Docker Hub ===${NC}"
+
+# Check backend version on Docker Hub
 BUILD_BACKEND=true
 BACKEND_VERSION_CONFLICT=false
-
-# Check if backend version already exists on Docker Hub
 echo -e "${YELLOW}Checking Docker Hub for likert-or-not-backend:${BACKEND_VERSION}...${NC}"
 if check_docker_hub "likert-or-not-backend" "${BACKEND_VERSION}"; then
     BACKEND_VERSION_CONFLICT=true
-    if [ "$INTERACTIVE" = true ]; then
-        if handle_version_conflict "backend" "$BACKEND_VERSION" "likert-or-not-backend"; then
-            # Re-read version after potential update
-            BACKEND_VERSION=$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2)
-        else
-            BUILD_BACKEND=false
-        fi
-    else
-        echo -e "${RED}Error: Backend version ${BACKEND_VERSION} already exists on Docker Hub!${NC}"
-        echo -e "${RED}Please update the version in backend/Cargo.toml${NC}"
-        exit 1
-    fi
+    echo -e "${RED}✗ Backend version ${BACKEND_VERSION} already exists on Docker Hub${NC}"
 else
-    echo -e "${GREEN}Version ${BACKEND_VERSION} is available${NC}"
+    echo -e "${GREEN}✓ Backend version ${BACKEND_VERSION} is available${NC}"
 fi
 
+# Check frontend version on Docker Hub
+BUILD_FRONTEND=true
+FRONTEND_VERSION_CONFLICT=false
+echo -e "${YELLOW}Checking Docker Hub for likert-or-not-frontend:${FRONTEND_VERSION}...${NC}"
+if check_docker_hub "likert-or-not-frontend" "${FRONTEND_VERSION}"; then
+    FRONTEND_VERSION_CONFLICT=true
+    echo -e "${RED}✗ Frontend version ${FRONTEND_VERSION} already exists on Docker Hub${NC}"
+else
+    echo -e "${GREEN}✓ Frontend version ${FRONTEND_VERSION} is available${NC}"
+fi
+
+# Handle conflicts if any exist
+if [ "$BACKEND_VERSION_CONFLICT" = true ] || [ "$FRONTEND_VERSION_CONFLICT" = true ]; then
+    echo ""
+    echo -e "${YELLOW}=== Version Conflicts Detected ===${NC}"
+    
+    # Handle backend conflict
+    if [ "$BACKEND_VERSION_CONFLICT" = true ]; then
+        echo ""
+        echo -e "${YELLOW}Backend:${NC}"
+        cd "$PROJECT_ROOT/backend"
+        if [ "$INTERACTIVE" = true ]; then
+            if handle_version_conflict "backend" "$BACKEND_VERSION" "likert-or-not-backend"; then
+                # Re-read version after potential update
+                BACKEND_VERSION=$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2)
+                echo -e "${GREEN}✓ Backend will be built with version ${BACKEND_VERSION}${NC}"
+            else
+                BUILD_BACKEND=false
+                echo -e "${YELLOW}⊘ Backend build skipped${NC}"
+            fi
+        else
+            echo -e "${RED}Error: Backend version ${BACKEND_VERSION} already exists on Docker Hub!${NC}"
+            echo -e "${RED}Please update the version in backend/Cargo.toml${NC}"
+            exit 1
+        fi
+    fi
+    
+    # Handle frontend conflict
+    if [ "$FRONTEND_VERSION_CONFLICT" = true ]; then
+        echo ""
+        echo -e "${YELLOW}Frontend:${NC}"
+        cd "$PROJECT_ROOT/frontend"
+        if [ "$INTERACTIVE" = true ]; then
+            if handle_version_conflict "frontend" "$FRONTEND_VERSION" "likert-or-not-frontend"; then
+                # Re-read version after potential update
+                FRONTEND_VERSION=$(grep '"version"' package.json | head -1 | sed -E 's/.*"version": "([^"]+)".*/\1/')
+                echo -e "${GREEN}✓ Frontend will be built with version ${FRONTEND_VERSION}${NC}"
+            else
+                BUILD_FRONTEND=false
+                echo -e "${YELLOW}⊘ Frontend build skipped${NC}"
+            fi
+        else
+            echo -e "${RED}Error: Frontend version ${FRONTEND_VERSION} already exists on Docker Hub!${NC}"
+            echo -e "${RED}Please update the version in frontend/package.json${NC}"
+            exit 1
+        fi
+    fi
+fi
+
+# Show build plan
+echo ""
+echo -e "${BLUE}=== Build Plan ===${NC}"
 if [ "$BUILD_BACKEND" = true ]; then
-    echo -e "${GREEN}Building backend Docker image...${NC}"
+    echo -e "  ${GREEN}✓${NC} Backend: ${BACKEND_VERSION}"
+else
+    echo -e "  ${YELLOW}⊘${NC} Backend: Skipped"
+fi
+if [ "$BUILD_FRONTEND" = true ]; then
+    echo -e "  ${GREEN}✓${NC} Frontend: ${FRONTEND_VERSION}"
+else
+    echo -e "  ${YELLOW}⊘${NC} Frontend: Skipped"
+fi
+
+if [ "$BUILD_BACKEND" = false ] && [ "$BUILD_FRONTEND" = false ]; then
+    echo ""
+    echo -e "${YELLOW}Nothing to build. Exiting.${NC}"
+    exit 0
+fi
+
+echo ""
+read -p "Proceed with build? (y/N): " confirm
+if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
+    echo -e "${YELLOW}Build cancelled.${NC}"
+    exit 0
+fi
+
+# Build Backend
+if [ "$BUILD_BACKEND" = true ]; then
+    echo ""
+    echo -e "${GREEN}=== Building Backend ===${NC}"
     cd "$PROJECT_ROOT"
+    echo -e "${YELLOW}Building backend Docker image version ${BACKEND_VERSION}...${NC}"
     docker build -f backend/Dockerfile \
         --build-arg VERSION=${BACKEND_VERSION} \
         -t ${DOCKER_ORG}/likert-or-not-backend:${BACKEND_VERSION} .
@@ -216,40 +301,12 @@ if [ "$BUILD_BACKEND" = true ]; then
     echo -e "${GREEN}✓ Backend built successfully${NC}"
 fi
 
-# Frontend
-echo ""
-echo -e "${GREEN}=== Frontend ===${NC}"
-cd "$PROJECT_ROOT/frontend"
-
-FRONTEND_VERSION=$(grep '"version"' package.json | head -1 | sed -E 's/.*"version": "([^"]+)".*/\1/')
-echo -e "${YELLOW}Current version: ${FRONTEND_VERSION}${NC}"
-
-BUILD_FRONTEND=true
-FRONTEND_VERSION_CONFLICT=false
-
-# Check if frontend version already exists on Docker Hub
-echo -e "${YELLOW}Checking Docker Hub for likert-or-not-frontend:${FRONTEND_VERSION}...${NC}"
-if check_docker_hub "likert-or-not-frontend" "${FRONTEND_VERSION}"; then
-    FRONTEND_VERSION_CONFLICT=true
-    if [ "$INTERACTIVE" = true ]; then
-        if handle_version_conflict "frontend" "$FRONTEND_VERSION" "likert-or-not-frontend"; then
-            # Re-read version after potential update
-            FRONTEND_VERSION=$(grep '"version"' package.json | head -1 | sed -E 's/.*"version": "([^"]+)".*/\1/')
-        else
-            BUILD_FRONTEND=false
-        fi
-    else
-        echo -e "${RED}Error: Frontend version ${FRONTEND_VERSION} already exists on Docker Hub!${NC}"
-        echo -e "${RED}Please update the version in frontend/package.json${NC}"
-        exit 1
-    fi
-else
-    echo -e "${GREEN}Version ${FRONTEND_VERSION} is available${NC}"
-fi
-
+# Build Frontend
 if [ "$BUILD_FRONTEND" = true ]; then
-    echo -e "${GREEN}Building frontend Docker image...${NC}"
-    
+    echo ""
+    echo -e "${GREEN}=== Building Frontend ===${NC}"
+    cd "$PROJECT_ROOT/frontend"
+    echo -e "${YELLOW}Building frontend Docker image version ${FRONTEND_VERSION}...${NC}"
     docker build \
         --build-arg VITE_API_URL="${VITE_API_URL:-/api}" \
         -t ${DOCKER_ORG}/likert-or-not-frontend:${FRONTEND_VERSION} .
