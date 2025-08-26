@@ -44,7 +44,7 @@ services:
     networks:
       - likert-network
     ports:
-      - "${PORT:-3001}:80"  # Map internal nginx port 80 to external port for Coolify
+      - "${PORT:-3002}:80"  # Map internal nginx port 80 to external port for Coolify
     
 volumes:
   likert-data:
