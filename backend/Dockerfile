@@ -38,6 +38,9 @@ WORKDIR /app
 COPY --from=builder /app/target/release/likert-form-mvp /app/likert-form-mvp
 COPY --from=builder /app/migrations /app/migrations
 
+# Copy config directory with form template
+COPY config /app/config
+
 # Create data directory for SQLite
 RUN mkdir -p /app/data && \
     useradd -m -u 1000 appuser && \
