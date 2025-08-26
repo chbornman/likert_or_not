@@ -571,9 +571,9 @@ export default function FormEditor() {
                                 const options = e.target.value.split('\n').filter(o => o.trim());
                                 updateQuestion(section.id, question.id, { options });
                               }}
-                              placeholder="Option 1&#10;Option 2&#10;Option 3"
+                              placeholder={`Option 1\nOption 2\nOption 3`}
                               rows={4}
-                              className="text-sm"
+                              className="text-sm font-mono"
                             />
                           </div>
                         )}
