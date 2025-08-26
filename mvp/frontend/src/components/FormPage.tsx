@@ -382,7 +382,14 @@ export default function FormPage() {
     newTouched.add('role');
     setTouchedFields(newTouched);
 
-    return name.trim() !== '' && email.trim() !== '' && email.includes('@') && role !== '';
+    // Check required fields based on settings
+    const nameRequired = !formData?.settings?.allowAnonymous;
+    const emailRequired = formData?.settings?.requireEmail !== false;
+    
+    const nameValid = !nameRequired || name.trim() !== '';
+    const emailValid = !emailRequired || (email.trim() !== '' && email.includes('@'));
+    
+    return nameValid && emailValid && role !== '';
   };
 
   const handleNextSection = () => {
@@ -792,60 +799,66 @@ export default function FormPage() {
                   </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="name" className="text-gunmetal font-semibold">
-                    Name <span className="text-rose-quartz font-bold">*</span>
-                  </Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => {
-                      setName(e.target.value);
-                      // Clear error if both fields are now valid
-                      if (error && e.target.value.trim() && email.trim() && email.includes('@')) {
-                        setError('');
-                      }
-                    }}
-                    onBlur={() => handleFieldTouch('name')}
-                    required
-                    className={`mt-2 border-2 transition-all bg-white/80 ${touchedFields.has('name') && !name.trim()
-                      ? 'border-rose-quartz ring-2 ring-rose-quartz/30'
-                      : 'border-cambridge-blue/30 focus:border-cerulean focus:bg-white'
-                      }`}
-                    placeholder="Enter your full name"
-                  />
-                  {touchedFields.has('name') && !name.trim() && (
-                    <p className="text-rose-quartz text-sm mt-1 font-medium">Name is required</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="email" className="text-gunmetal font-semibold">
-                    Email <span className="text-rose-quartz font-bold">*</span>
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      // Clear error if both fields are now valid
-                      if (error && name.trim() && e.target.value.trim() && e.target.value.includes('@')) {
-                        setError('');
-                      }
-                    }}
-                    onBlur={() => handleFieldTouch('email')}
-                    required
-                    className={`mt-2 border-2 transition-all bg-white/80 ${touchedFields.has('email') && (!email.trim() || !email.includes('@'))
-                      ? 'border-rose-quartz ring-2 ring-rose-quartz/30'
-                      : 'border-cambridge-blue/30 focus:border-cerulean focus:bg-white'
-                      }`}
-                    placeholder="your.email@example.com"
-                  />
-                  {touchedFields.has('email') && (!email.trim() || !email.includes('@')) && (
-                    <p className="text-rose-quartz text-sm mt-1 font-medium">Valid email is required</p>
-                  )}
-                </div>
+                {/* Name field - only show if not anonymous */}
+                {!formData.settings?.allowAnonymous && (
+                  <div>
+                    <Label htmlFor="name" className="text-gunmetal font-semibold">
+                      Name <span className="text-rose-quartz font-bold">*</span>
+                    </Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      value={name}
+                      onChange={(e) => {
+                        setName(e.target.value);
+                        // Clear error if both fields are now valid
+                        if (error && e.target.value.trim() && email.trim() && email.includes('@')) {
+                          setError('');
+                        }
+                      }}
+                      onBlur={() => handleFieldTouch('name')}
+                      required
+                      className={`mt-2 border-2 transition-all bg-white/80 ${touchedFields.has('name') && !name.trim()
+                        ? 'border-rose-quartz ring-2 ring-rose-quartz/30'
+                        : 'border-cambridge-blue/30 focus:border-cerulean focus:bg-white'
+                        }`}
+                      placeholder="Enter your full name"
+                    />
+                    {touchedFields.has('name') && !name.trim() && (
+                      <p className="text-rose-quartz text-sm mt-1 font-medium">Name is required</p>
+                    )}
+                  </div>
+                )}
+                {/* Email field - only show if required by settings */}
+                {(formData.settings?.requireEmail !== false) && (
+                  <div>
+                    <Label htmlFor="email" className="text-gunmetal font-semibold">
+                      Email <span className="text-rose-quartz font-bold">*</span>
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        // Clear error if both fields are now valid
+                        if (error && name.trim() && e.target.value.trim() && e.target.value.includes('@')) {
+                          setError('');
+                        }
+                      }}
+                      onBlur={() => handleFieldTouch('email')}
+                      required
+                      className={`mt-2 border-2 transition-all bg-white/80 ${touchedFields.has('email') && (!email.trim() || !email.includes('@'))
+                        ? 'border-rose-quartz ring-2 ring-rose-quartz/30'
+                        : 'border-cambridge-blue/30 focus:border-cerulean focus:bg-white'
+                        }`}
+                      placeholder="your.email@example.com"
+                    />
+                    {touchedFields.has('email') && (!email.trim() || !email.includes('@')) && (
+                      <p className="text-rose-quartz text-sm mt-1 font-medium">Valid email is required</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Role selection */}
                 <div>
@@ -1101,6 +1114,8 @@ export default function FormPage() {
                           value={answers.get(question.id)?.date_value || ''}
                           isRequired={question.is_required}
                           type="datetime"
+                          // TODO: Add format support to DateTimePicker component
+                          // format={question.dateFormat}
                           onChange={(value) => {
                             const newAnswers = new Map(answers);
                             const current = newAnswers.get(question.id) || { question_id: question.id, comment: '' };
