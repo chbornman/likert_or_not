@@ -625,11 +625,11 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-cerulean/10 to-cerulean/20 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-white via-cerulean/10 to-cerulean/20 py-4 sm:py-8 px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
-          <div className="flex gap-2">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">Admin Dashboard</h1>
+          <div className="flex flex-wrap gap-2">
             <input
               ref={fileInputRef}
               type="file"
@@ -640,30 +640,33 @@ export default function AdminDashboard() {
             />
             <Button
               onClick={() => navigate('/admin/forms/new')}
-              className="bg-cerulean hover:bg-cerulean/90 text-white"
+              className="bg-cerulean hover:bg-cerulean/90 text-white flex-1 sm:flex-initial"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Form
+              <Plus className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Create Form</span>
+              <span className="sm:hidden">Create</span>
             </Button>
             <Button
               onClick={downloadTemplate}
               variant="outline"
-              className="bg-white border-cambridge-blue text-cambridge-blue hover:bg-cambridge-blue hover:text-white"
+              className="bg-white border-cambridge-blue text-cambridge-blue hover:bg-cambridge-blue hover:text-white flex-1 sm:flex-initial"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Template
+              <Download className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Template</span>
+              <span className="sm:hidden">Template</span>
             </Button>
             <Button
               onClick={() => fileInputRef.current?.click()}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-green-600 hover:bg-green-700 text-white flex-1 sm:flex-initial"
             >
-              <Upload className="w-4 h-4 mr-2" />
-              Import
+              <Upload className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Import</span>
+              <span className="sm:hidden">Import</span>
             </Button>
             <Button 
               onClick={handleLogout}
               variant="outline"
-              className="border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white"
+              className="border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white flex-1 sm:flex-initial"
             >
               Logout
             </Button>
@@ -684,7 +687,7 @@ export default function AdminDashboard() {
 
         {/* Status Tabs */}
         <div className="mb-6 border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
+          <nav className="-mb-px flex space-x-4 sm:space-x-8">
             <button
               onClick={() => setActiveTab('active')}
               className={`
@@ -695,9 +698,10 @@ export default function AdminDashboard() {
                 }
               `}
             >
-              Active Forms
+              <span className="hidden sm:inline">Active Forms</span>
+              <span className="sm:hidden">Active</span>
               {forms.filter(f => f.status !== 'archived').length > 0 && (
-                <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                <span className={`ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs rounded-full ${
                   activeTab === 'active'
                     ? 'bg-cerulean text-white'
                     : 'bg-gray-200 text-gray-600'
@@ -716,9 +720,10 @@ export default function AdminDashboard() {
                 }
               `}
             >
-              Archived
+              <span className="hidden sm:inline">Archived</span>
+              <span className="sm:hidden">Archived</span>
               {forms.filter(f => f.status === 'archived').length > 0 && (
-                <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                <span className={`ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs rounded-full ${
                   activeTab === 'archived'
                     ? 'bg-cerulean text-white'
                     : 'bg-gray-200 text-gray-600'
@@ -785,11 +790,11 @@ export default function AdminDashboard() {
             <div className="space-y-4">
               {/* Persistent Action Bar - Always visible, like Google Drive */}
               <Card className="p-3 border-b-2">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-center gap-4">
                     {selectedForm && (
                       <div>
-                        <h3 className="text-sm font-semibold text-gray-800">{selectedForm.title}</h3>
+                        <h3 className="text-sm font-semibold text-gray-800 line-clamp-1">{selectedForm.title}</h3>
                         <p className="text-xs text-gray-500">
                           {selectedResponseCount} responses
                         </p>
@@ -799,9 +804,9 @@ export default function AdminDashboard() {
                       <p className="text-sm text-gray-500">Select a form to perform actions</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 flex-wrap">
                     <Button 
-                      className={`${
+                      className={`text-xs sm:text-sm ${
                         selectedForm 
                           ? 'bg-gradient-to-r from-cerulean to-cambridge-blue hover:from-cerulean/90 hover:to-cambridge-blue/90 text-white' 
                           : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -809,12 +814,13 @@ export default function AdminDashboard() {
                       onClick={() => selectedForm && navigateToFormResults(selectedForm.id)}
                       disabled={!selectedForm}
                     >
-                      <Eye className="w-4 h-4 mr-2" />
-                      View Results
+                      <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">View Results</span>
+                      <span className="sm:hidden">Results</span>
                     </Button>
                     <Button
                       variant="outline"
-                      className={`${
+                      className={`text-xs sm:text-sm ${
                         selectedForm && selectedForm.status !== 'archived'
                           ? 'border-cambridge-blue text-cambridge-blue hover:bg-cambridge-blue hover:text-white'
                           : 'border-gray-200 text-gray-400 cursor-not-allowed'
@@ -822,41 +828,41 @@ export default function AdminDashboard() {
                       onClick={() => selectedForm && navigate(`/admin/forms/${selectedForm.id}/edit`)}
                       disabled={!selectedForm || selectedForm?.status === 'archived'}
                     >
-                      <Edit className="w-4 h-4 mr-2" />
+                      <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                       Edit
                     </Button>
                     
-                    <div className="h-6 w-px bg-gray-300 mx-1" />
+                    <div className="h-6 w-px bg-gray-300 mx-1 hidden sm:block" />
                     
                     <Button
                       size="icon"
                       variant="ghost"
-                      className={selectedForm ? '' : 'text-gray-400 cursor-not-allowed'}
+                      className={`h-8 w-8 sm:h-10 sm:w-10 ${selectedForm ? '' : 'text-gray-400 cursor-not-allowed'}`}
                       onClick={() => selectedForm && exportFormAsJSON(selectedForm.id, selectedForm.title)}
                       disabled={!selectedForm}
                       title="Export as JSON"
                     >
-                      <FileJson className="w-4 h-4" />
+                      <FileJson className="w-3 h-3 sm:w-4 sm:h-4" />
                     </Button>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className={selectedForm ? '' : 'text-gray-400 cursor-not-allowed'}
+                      className={`h-8 w-8 sm:h-10 sm:w-10 ${selectedForm ? '' : 'text-gray-400 cursor-not-allowed'}`}
                       onClick={() => selectedForm && exportFormToExcel(selectedForm.id, selectedForm.title)}
                       disabled={!selectedForm}
                       title="Export Excel"
                     >
-                      <FileSpreadsheet className="w-4 h-4" />
+                      <FileSpreadsheet className="w-3 h-3 sm:w-4 sm:h-4" />
                     </Button>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className={selectedForm ? '' : 'text-gray-400 cursor-not-allowed'}
+                      className={`h-8 w-8 sm:h-10 sm:w-10 ${selectedForm ? '' : 'text-gray-400 cursor-not-allowed'}`}
                       onClick={() => selectedForm && handleCloneClick(selectedForm.id, selectedForm.title)}
                       disabled={!selectedForm}
                       title="Clone Form"
                     >
-                      <Copy className="w-4 h-4" />
+                      <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
                     </Button>
                     
                     <div className="h-6 w-px bg-gray-300 mx-1" />
@@ -939,8 +945,64 @@ export default function AdminDashboard() {
                 </div>
               </Card>
               
-              {/* Table View */}
-              <Card>
+              {/* Mobile Card View (shown on small screens) */}
+              <div className="sm:hidden space-y-3">
+                {filteredForms.map(form => {
+                  const stats = formStats.get(form.id);
+                  const responseCount = stats?.response_count || 0;
+                  const lastResponse = stats?.last_response;
+                  const isSelected = selectedFormId === form.id;
+                  
+                  return (
+                    <Card 
+                      key={form.id}
+                      onClick={() => setSelectedFormId(isSelected ? null : form.id)}
+                      className={`cursor-pointer transition-all ${
+                        isSelected 
+                          ? 'ring-2 ring-cerulean bg-cerulean/5' 
+                          : 'hover:shadow-md'
+                      }`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <h3 className="font-medium text-gray-900 line-clamp-2">
+                              {form.title}
+                            </h3>
+                            {form.description && (
+                              <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                                {form.description}
+                              </p>
+                            )}
+                          </div>
+                          <span className={`ml-2 inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${
+                            form.status === 'published' 
+                              ? 'bg-green-100 text-green-800' 
+                              : form.status === 'draft'
+                              ? 'bg-gray-100 text-gray-600'
+                              : form.status === 'finished'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {form.status}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-500">
+                          <span>{responseCount} responses</span>
+                          <span>
+                            {lastResponse 
+                              ? `Last: ${new Date(lastResponse).toLocaleDateString()}` 
+                              : 'No responses'}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Table View (hidden on small screens) */}
+              <Card className="hidden sm:block">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b">
