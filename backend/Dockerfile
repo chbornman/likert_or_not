@@ -1,3 +1,9 @@
+########################################
+# DOCKER HUB IMAGE: chbornman/likert-or-not-backend
+# VERSION: Check backend/Cargo.toml for current version
+# LATEST TAG: chbornman/likert-or-not-backend:latest
+########################################
+
 # Build stage
 FROM rustlang/rust:nightly AS builder
 
@@ -25,6 +31,14 @@ RUN cargo build --release
 
 # Runtime stage
 FROM debian:bookworm-slim
+
+# Build argument for version (passed via docker build --build-arg)
+ARG VERSION=latest
+
+# Label the image with version info
+LABEL org.opencontainers.image.source="https://github.com/chbornman/likert_or_not"
+LABEL org.opencontainers.image.description="Likert Form Backend Service"
+LABEL org.opencontainers.image.version="${VERSION}"
 
 RUN apt-get update && apt-get install -y \
     ca-certificates \

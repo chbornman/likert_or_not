@@ -209,7 +209,9 @@ fi
 if [ "$BUILD_BACKEND" = true ]; then
     echo -e "${GREEN}Building backend Docker image...${NC}"
     cd "$PROJECT_ROOT"
-    docker build -f backend/Dockerfile -t ${DOCKER_ORG}/likert-or-not-backend:${BACKEND_VERSION} .
+    docker build -f backend/Dockerfile \
+        --build-arg VERSION=${BACKEND_VERSION} \
+        -t ${DOCKER_ORG}/likert-or-not-backend:${BACKEND_VERSION} .
     docker tag ${DOCKER_ORG}/likert-or-not-backend:${BACKEND_VERSION} ${DOCKER_ORG}/likert-or-not-backend:latest
     echo -e "${GREEN}✓ Backend built successfully${NC}"
 fi

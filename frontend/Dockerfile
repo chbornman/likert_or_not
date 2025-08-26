@@ -1,3 +1,9 @@
+########################################
+# DOCKER HUB IMAGE: chbornman/likert-or-not-frontend
+# VERSION: Check frontend/package.json for current version
+# LATEST TAG: chbornman/likert-or-not-frontend:latest
+########################################
+
 # Frontend Dockerfile for production
 FROM oven/bun:1 AS frontend-builder
 
