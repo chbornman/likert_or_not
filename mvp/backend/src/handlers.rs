@@ -245,6 +245,50 @@ pub async fn submit_form_with_privacy(
     }))))
 }
 
+/// Check if an email has already submitted a response for a form
+pub async fn check_existing_submission(
+    Path(form_id): Path<String>,
+    State(state): State<AppState>,
+    Json(req): Json<serde_json::Value>,
+) -> Result<impl IntoResponse, AppError> {
+    let email = req.get("email")
+        .and_then(|e| e.as_str())
+        .ok_or_else(|| AppError::BadRequest("Email is required".to_string()))?;
+    
+    // Generate email hash
+    use sha2::{Sha256, Digest};
+    let mut hasher = Sha256::new();
+    hasher.update(email.to_lowercase().trim());
+    hasher.update(b"likert-form-salt");
+    let email_hash = format!("{:x}", hasher.finalize());
+    
+    // Check if this email has already submitted for this form
+    let result: Option<(i64,)> = sqlx::query_as(
+        r#"
+        SELECT COUNT(*)
+        FROM responses r
+        JOIN respondents res ON res.id = r.respondent_id
+        WHERE res.email_hash = ? AND r.form_id = ?
+        "#
+    )
+    .bind(&email_hash)
+    .bind(&form_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| AppError::Database(e))?;
+    
+    let has_submitted = result.map(|(count,)| count > 0).unwrap_or(false);
+    
+    Ok(Json(json!({
+        "has_submitted": has_submitted,
+        "message": if has_submitted {
+            "You have already submitted a response for this form"
+        } else {
+            "No previous submission found"
+        }
+    })))
+}
+
 /// Get anonymous statistics for a form (no PII)
 pub async fn get_form_stats_anonymous(
     Path(form_id): Path<String>,
@@ -424,6 +468,52 @@ pub async fn get_responses_with_pii(
     Ok(Json(responses))
 }
 
+/// Get list of respondents for a form (PII included, admin only)
+pub async fn get_form_respondents(
+    Path(form_id): Path<String>,
+    State(state): State<AppState>,
+    // Add auth check here in production
+) -> Result<impl IntoResponse, AppError> {
+    // Fetch respondents who submitted to this form
+    let respondents: Vec<(String, Option<String>, Option<String>, Option<String>, String)> = 
+        sqlx::query_as(
+            r#"
+            SELECT DISTINCT
+                res.id,
+                res.name,
+                res.email,
+                r.role,
+                r.submitted_at
+            FROM responses r
+            LEFT JOIN respondents res ON res.id = r.respondent_id
+            WHERE r.form_id = ?
+            ORDER BY r.submitted_at DESC
+            "#
+        )
+        .bind(&form_id)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| AppError::Database(e))?;
+    
+    let respondent_list: Vec<_> = respondents
+        .into_iter()
+        .map(|(id, name, email, role, submitted_at)| {
+            json!({
+                "id": id,
+                "name": name.unwrap_or_else(|| "Anonymous".to_string()),
+                "email": email.unwrap_or_else(|| "No email".to_string()),
+                "role": role.unwrap_or_else(|| "Not specified".to_string()),
+                "submitted_at": submitted_at
+            })
+        })
+        .collect();
+    
+    Ok(Json(json!({
+        "respondents": respondent_list,
+        "total": respondent_list.len()
+    })))
+}
+
 /// Delete PII for a specific respondent (GDPR compliance)
 pub async fn delete_respondent_pii(
     Path(respondent_id): Path<String>,
@@ -564,8 +654,70 @@ pub async fn get_admin_responses(
         return Err(AppError::Unauthorized("Invalid admin token".to_string()));
     }
     
-    // Delegate to existing handler
-    get_responses_with_pii(Path(params.form_id), State(state)).await
+    // Fetch responses WITHOUT PII
+    let responses_raw: Vec<(String, String, Option<String>, String)> = 
+        sqlx::query_as(
+            r#"
+            SELECT 
+                r.id,
+                r.form_id,
+                r.role,
+                r.submitted_at
+            FROM responses r
+            WHERE r.form_id = ?
+            ORDER BY r.submitted_at DESC
+            "#
+        )
+        .bind(&params.form_id)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| AppError::Database(e))?;
+    
+    let mut responses = Vec::new();
+    
+    for (id, form_id, role, submitted_at) in responses_raw {
+        // Get answers for this response
+        let answers_raw: Vec<(String, String, String)> = sqlx::query_as(
+            r#"
+            SELECT 
+                a.question_id,
+                q.title,
+                CAST(a.value AS TEXT)
+            FROM answers a
+            JOIN questions q ON q.id = a.question_id
+            WHERE a.response_id = ?
+            ORDER BY q.position
+            "#
+        )
+        .bind(&id)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| AppError::Database(e))?;
+        
+        let answers: Vec<_> = answers_raw
+            .into_iter()
+            .map(|(q_id, title, value_str)| {
+                let value: serde_json::Value = serde_json::from_str(&value_str)
+                    .unwrap_or(serde_json::Value::Null);
+                json!({
+                    "question_id": q_id,
+                    "question_title": title,
+                    "value": value
+                })
+            })
+            .collect();
+        
+        responses.push(json!({
+            "id": id,
+            "form_id": form_id,
+            "role": role,
+            "submitted_at": submitted_at,
+            "answers": answers,
+            "completed": true  // All submitted responses are considered complete
+        }));
+    }
+    
+    Ok(Json(responses))
 }
 
 /// Import a form from JSON configuration (admin only)
