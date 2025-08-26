@@ -481,6 +481,7 @@ pub struct ImportQuestion {
     #[serde(default)]
     pub allow_comment: bool,
     pub help_text: Option<String>,
+    #[allow(dead_code)]
     pub position: i32,
     pub features: Option<JsonValue>,
 }
@@ -519,6 +520,7 @@ pub struct UpdateQuestion {
     pub is_required: bool,
     pub allow_comment: Option<bool>,
     pub help_text: Option<String>,
+    #[allow(dead_code)]
     pub position: i32,
     pub placeholder: Option<String>,
     #[serde(rename = "charLimit")]
