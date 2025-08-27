@@ -724,7 +724,7 @@ pub struct AuthQuery {
 #[derive(Debug, Deserialize)]
 pub struct AdminStatsQuery {
     pub token: Option<String>,
-    pub form_id: String,
+    pub form_id: Option<String>,
 }
 
 /// Get form stats for admin dashboard
@@ -732,12 +732,49 @@ pub async fn get_admin_stats(
     headers: HeaderMap,
     Query(params): Query<AdminStatsQuery>,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<JsonValue>, AppError> {
     // Check admin token (from header or query param)
     check_admin_auth(&headers, params.token.as_deref(), &state.admin_token)?;
 
-    // Get stats for specific form
-    get_form_stats_anonymous(Path(params.form_id), State(state)).await
+    // If form_id is provided, get stats for specific form
+    if let Some(form_id) = params.form_id {
+        // Get total responses
+        let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM responses WHERE form_id = ?")
+            .bind(&form_id)
+            .fetch_one(&state.db)
+            .await
+            .map_err(AppError::Database)?;
+
+        return Ok(Json(json!({
+            "form_id": form_id,
+            "total_responses": total.0,
+            "status": "success"
+        })));
+    }
+
+    // Otherwise, return general admin stats
+    // Get total counts
+    let total_forms: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM forms")
+        .fetch_one(&state.db)
+        .await
+        .map_err(AppError::Database)?;
+
+    let total_responses: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM responses")
+        .fetch_one(&state.db)
+        .await
+        .map_err(AppError::Database)?;
+
+    let total_respondents: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM respondents")
+        .fetch_one(&state.db)
+        .await
+        .map_err(AppError::Database)?;
+
+    Ok(Json(json!({
+        "total_forms": total_forms.0,
+        "total_responses": total_responses.0,
+        "total_respondents": total_respondents.0,
+        "status": "success"
+    })))
 }
 
 /// Get responses for admin (with PII)
@@ -749,23 +786,44 @@ pub async fn get_admin_responses(
     // Check admin token (from header or query param)
     check_admin_auth(&headers, params.token.as_deref(), &state.admin_token)?;
 
-    // Fetch responses WITHOUT PII
-    let responses_raw: Vec<(String, String, Option<String>, String)> = sqlx::query_as(
-        r#"
-            SELECT
-                r.id,
-                r.form_id,
-                r.role,
-                r.submitted_at
-            FROM responses r
-            WHERE r.form_id = ?
-            ORDER BY r.submitted_at DESC
-            "#,
-    )
-    .bind(&params.form_id)
-    .fetch_all(&state.db)
-    .await
-    .map_err(AppError::Database)?;
+    // Build query based on whether form_id is provided
+    let responses_raw: Vec<(String, String, Option<String>, String)> =
+        if let Some(form_id) = params.form_id {
+            // Get responses for specific form
+            sqlx::query_as(
+                r#"
+                SELECT
+                    r.id,
+                    r.form_id,
+                    r.role,
+                    r.submitted_at
+                FROM responses r
+                WHERE r.form_id = ?
+                ORDER BY r.submitted_at DESC
+                "#,
+            )
+            .bind(&form_id)
+            .fetch_all(&state.db)
+            .await
+            .map_err(AppError::Database)?
+        } else {
+            // Get all responses across all forms
+            sqlx::query_as(
+                r#"
+                SELECT
+                    r.id,
+                    r.form_id,
+                    r.role,
+                    r.submitted_at
+                FROM responses r
+                ORDER BY r.submitted_at DESC
+                LIMIT 100
+                "#,
+            )
+            .fetch_all(&state.db)
+            .await
+            .map_err(AppError::Database)?
+        };
 
     let mut responses = Vec::new();
 
