@@ -16,7 +16,7 @@ DOCKER_ORG="chbornman"
 check_docker_hub() {
     local image=$1
     local tag=$2
-    
+
     # Check if image:tag exists on Docker Hub
     if docker manifest inspect ${DOCKER_ORG}/${image}:${tag} > /dev/null 2>&1; then
         return 0  # Image exists
@@ -29,9 +29,9 @@ check_docker_hub() {
 increment_version() {
     local version=$1
     local part=$2
-    
+
     IFS='.' read -ra PARTS <<< "$version"
-    
+
     case $part in
         major)
             echo "$((PARTS[0] + 1)).0.0"
@@ -52,14 +52,14 @@ increment_version() {
 update_backend_version() {
     local new_version=$1
     cd backend
-    
+
     # Update Cargo.toml
     sed -i.bak "s/^version = \".*\"/version = \"$new_version\"/" Cargo.toml
     rm Cargo.toml.bak
-    
+
     # Update Cargo.lock
     cargo update --workspace
-    
+
     echo -e "${GREEN}Updated backend version to ${new_version}${NC}"
 }
 
@@ -67,11 +67,11 @@ update_backend_version() {
 update_frontend_version() {
     local new_version=$1
     cd frontend
-    
+
     # Update package.json using sed (works with both npm and bun)
     sed -i.bak "s/\"version\": \".*\"/\"version\": \"$new_version\"/" package.json
     rm package.json.bak
-    
+
     echo -e "${GREEN}Updated frontend version to ${new_version}${NC}"
 }
 
@@ -80,7 +80,7 @@ handle_version_conflict() {
     local component=$1
     local current_version=$2
     local image_name=$3
-    
+
     echo ""
     echo -e "${YELLOW}Version ${current_version} of ${component} already exists on Docker Hub${NC}"
     echo -e "${BLUE}What would you like to do?${NC}"
@@ -90,9 +90,9 @@ handle_version_conflict() {
     echo "  4) Increment major version (to $(increment_version $current_version major))"
     echo "  5) Force rebuild with same version (overwrites existing)"
     echo "  6) Exit"
-    
+
     read -p "Select option (1-6): " choice
-    
+
     case $choice in
         1)
             echo -e "${YELLOW}Skipping ${component}...${NC}"
@@ -217,7 +217,7 @@ fi
 if [ "$BACKEND_VERSION_CONFLICT" = true ] || [ "$FRONTEND_VERSION_CONFLICT" = true ]; then
     echo ""
     echo -e "${YELLOW}=== Version Conflicts Detected ===${NC}"
-    
+
     # Handle backend conflict
     if [ "$BACKEND_VERSION_CONFLICT" = true ]; then
         echo ""
@@ -238,7 +238,7 @@ if [ "$BACKEND_VERSION_CONFLICT" = true ] || [ "$FRONTEND_VERSION_CONFLICT" = tr
             exit 1
         fi
     fi
-    
+
     # Handle frontend conflict
     if [ "$FRONTEND_VERSION_CONFLICT" = true ]; then
         echo ""
@@ -288,17 +288,49 @@ if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
     exit 0
 fi
 
+# Setup buildx for multi-platform builds (if not already done)
+echo ""
+echo -e "${BLUE}=== Setting up Docker Buildx ===${NC}"
+if ! docker buildx ls | grep -q "multiplatform"; then
+    echo -e "${YELLOW}Creating multiplatform builder...${NC}"
+    docker buildx create --name multiplatform --driver docker-container --use
+    docker buildx inspect --bootstrap
+    echo -e "${GREEN}✓ Multiplatform builder created${NC}"
+else
+    docker buildx use multiplatform
+    echo -e "${GREEN}✓ Using existing multiplatform builder${NC}"
+fi
+
 # Build Backend
 if [ "$BUILD_BACKEND" = true ]; then
     echo ""
     echo -e "${GREEN}=== Building Backend ===${NC}"
     cd "$PROJECT_ROOT"
-    echo -e "${YELLOW}Building backend Docker image version ${BACKEND_VERSION}...${NC}"
-    docker build -f backend/Dockerfile \
-        --build-arg VERSION=${BACKEND_VERSION} \
-        -t ${DOCKER_ORG}/likert-or-not-backend:${BACKEND_VERSION} .
-    docker tag ${DOCKER_ORG}/likert-or-not-backend:${BACKEND_VERSION} ${DOCKER_ORG}/likert-or-not-backend:latest
-    echo -e "${GREEN}✓ Backend built successfully${NC}"
+    echo -e "${YELLOW}Building backend Docker image version ${BACKEND_VERSION} for linux/amd64...${NC}"
+
+    if [ "$PUSH_TO_HUB" = true ]; then
+        # Build and push in one step (more efficient)
+        docker buildx build \
+            --platform linux/amd64 \
+            -f backend/Dockerfile \
+            --build-arg VERSION=${BACKEND_VERSION} \
+            -t ${DOCKER_ORG}/likert-or-not-backend:${BACKEND_VERSION} \
+            -t ${DOCKER_ORG}/likert-or-not-backend:latest \
+            --push \
+            .
+        echo -e "${GREEN}✓ Backend built and pushed successfully${NC}"
+    else
+        # Build locally (will create manifest for platform)
+        docker buildx build \
+            --platform linux/amd64 \
+            -f backend/Dockerfile \
+            --build-arg VERSION=${BACKEND_VERSION} \
+            -t ${DOCKER_ORG}/likert-or-not-backend:${BACKEND_VERSION} \
+            -t ${DOCKER_ORG}/likert-or-not-backend:latest \
+            --load \
+            .
+        echo -e "${GREEN}✓ Backend built successfully${NC}"
+    fi
 fi
 
 # Build Frontend
@@ -306,12 +338,29 @@ if [ "$BUILD_FRONTEND" = true ]; then
     echo ""
     echo -e "${GREEN}=== Building Frontend ===${NC}"
     cd "$PROJECT_ROOT/frontend"
-    echo -e "${YELLOW}Building frontend Docker image version ${FRONTEND_VERSION}...${NC}"
-    docker build \
-        --build-arg VITE_API_URL="${VITE_API_URL:-/api}" \
-        -t ${DOCKER_ORG}/likert-or-not-frontend:${FRONTEND_VERSION} .
-    docker tag ${DOCKER_ORG}/likert-or-not-frontend:${FRONTEND_VERSION} ${DOCKER_ORG}/likert-or-not-frontend:latest
-    echo -e "${GREEN}✓ Frontend built successfully${NC}"
+    echo -e "${YELLOW}Building frontend Docker image version ${FRONTEND_VERSION} for linux/amd64...${NC}"
+
+    if [ "$PUSH_TO_HUB" = true ]; then
+        # Build and push in one step
+        docker buildx build \
+            --platform linux/amd64 \
+            --build-arg VITE_API_URL="${VITE_API_URL:-/api}" \
+            -t ${DOCKER_ORG}/likert-or-not-frontend:${FRONTEND_VERSION} \
+            -t ${DOCKER_ORG}/likert-or-not-frontend:latest \
+            --push \
+            .
+        echo -e "${GREEN}✓ Frontend built and pushed successfully${NC}"
+    else
+        # Build locally
+        docker buildx build \
+            --platform linux/amd64 \
+            --build-arg VITE_API_URL="${VITE_API_URL:-/api}" \
+            -t ${DOCKER_ORG}/likert-or-not-frontend:${FRONTEND_VERSION} \
+            -t ${DOCKER_ORG}/likert-or-not-frontend:latest \
+            --load \
+            .
+        echo -e "${GREEN}✓ Frontend built successfully${NC}"
+    fi
 fi
 
 # Summary
@@ -331,42 +380,20 @@ fi
 
 # Push to Docker Hub if requested
 if [ "$PUSH_TO_HUB" = true ]; then
-    echo ""
-    echo -e "${YELLOW}=== Pushing to Docker Hub ===${NC}"
-    
-    if [ "$BUILD_BACKEND" = true ]; then
-        echo -e "${YELLOW}Pushing backend images...${NC}"
-        docker push ${DOCKER_ORG}/likert-or-not-backend:${BACKEND_VERSION}
-        docker push ${DOCKER_ORG}/likert-or-not-backend:latest
-        echo -e "${GREEN}✓ Backend pushed${NC}"
-    fi
-    
-    if [ "$BUILD_FRONTEND" = true ]; then
-        echo -e "${YELLOW}Pushing frontend images...${NC}"
-        docker push ${DOCKER_ORG}/likert-or-not-frontend:${FRONTEND_VERSION}
-        docker push ${DOCKER_ORG}/likert-or-not-frontend:latest
-        echo -e "${GREEN}✓ Frontend pushed${NC}"
-    fi
-    
+    # When using --push flag, images are already pushed during build with buildx
     if [ "$BUILD_BACKEND" = true ] || [ "$BUILD_FRONTEND" = true ]; then
         echo ""
         echo -e "${GREEN}Successfully pushed images to Docker Hub!${NC}"
+        echo -e "${YELLOW}Images are built for linux/amd64 architecture${NC}"
     fi
 else
     echo ""
     if [ "$BUILD_BACKEND" = true ] || [ "$BUILD_FRONTEND" = true ]; then
-        echo -e "${YELLOW}To push to Docker Hub, run:${NC}"
+        echo -e "${YELLOW}To build and push to Docker Hub for linux/amd64, run:${NC}"
         echo "  $0 --push"
         echo ""
-        echo -e "${YELLOW}Or manually push:${NC}"
-        if [ "$BUILD_BACKEND" = true ]; then
-            echo "  docker push ${DOCKER_ORG}/likert-or-not-backend:${BACKEND_VERSION}"
-            echo "  docker push ${DOCKER_ORG}/likert-or-not-backend:latest"
-        fi
-        if [ "$BUILD_FRONTEND" = true ]; then
-            echo "  docker push ${DOCKER_ORG}/likert-or-not-frontend:${FRONTEND_VERSION}"
-            echo "  docker push ${DOCKER_ORG}/likert-or-not-frontend:latest"
-        fi
+        echo -e "${YELLOW}Note: When using buildx for linux/amd64, you must rebuild with --push${NC}"
+        echo -e "${YELLOW}Regular 'docker push' won't work for cross-platform builds.${NC}"
     fi
 fi
 
