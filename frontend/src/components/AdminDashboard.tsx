@@ -86,24 +86,64 @@ export default function AdminDashboard() {
     // Check if there's a saved token in sessionStorage
     const savedToken = sessionStorage.getItem("admin_token");
     if (savedToken) {
-      setToken(savedToken);
-      setIsAuthenticated(true);
-      setLoading(true);
-      fetchDashboardData(savedToken);
+      // Validate the saved token is still valid
+      validateAndLoadDashboard(savedToken);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const validateAndLoadDashboard = async (authToken: string) => {
+    setLoading(true);
+    try {
+      const testRes = await fetch(`/api/admin/stats?token=${authToken}`);
+
+      if (!testRes.ok) {
+        // Invalid token, clear it and show login
+        sessionStorage.removeItem("admin_token");
+        setLoading(false);
+        return;
+      }
+
+      // Token is valid
+      setToken(authToken);
+      setIsAuthenticated(true);
+      fetchDashboardData(authToken);
+    } catch (error) {
+      sessionStorage.removeItem("admin_token");
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError("");
-
-    // Use the password as the token directly
-    setToken(password);
-    setIsAuthenticated(true);
     setLoading(true);
 
-    // Try to fetch data with this token
-    fetchDashboardData(password);
+    // Validate token with backend first
+    try {
+      const testRes = await fetch(`/api/admin/stats?token=${password}`);
+
+      if (!testRes.ok) {
+        if (testRes.status === 401) {
+          setAuthError("Invalid password. Please try again.");
+        } else {
+          setAuthError("Server error. Please try again later.");
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Token is valid, now set authenticated and fetch all data
+      setToken(password);
+      setIsAuthenticated(true);
+      sessionStorage.setItem("admin_token", password);
+
+      // Fetch dashboard data
+      fetchDashboardData(password);
+    } catch (error) {
+      setAuthError("Failed to connect to server. Please try again.");
+      setLoading(false);
+    }
   };
 
   const fetchDashboardData = async (authToken: string) => {
@@ -551,9 +591,9 @@ export default function AdminDashboard() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-cerulean to-cambridge-blue hover:from-cerulean/90 hover:to-cambridge-blue/90 text-white"
-                disabled={!password.trim()}
+                disabled={!password.trim() || loading}
               >
-                Access Dashboard
+                {loading ? "Verifying..." : "Access Dashboard"}
               </Button>
             </form>
           </CardContent>

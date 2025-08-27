@@ -53,7 +53,7 @@ COPY --from=builder /app/target/release/likert-form-mvp /app/likert-form-mvp
 COPY --from=builder /app/migrations /app/migrations
 
 # Copy config directory with form template (build context is project root)
-COPY ./config /app/config
+COPY ./backend/config /app/config
 
 # Create data directory for SQLite - run as root to avoid permission issues
 RUN mkdir -p /app/data && chmod 777 /app/data

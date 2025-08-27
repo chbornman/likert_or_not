@@ -10,9 +10,13 @@ A production-ready Likert scale form application for Executive Director performa
 - **Database**: [SQLite](https://www.sqlite.org/) with [SQLx](https://github.com/launchbadge/sqlx) - Type-safe SQL with compile-time checked queries
 - **Serialization**: [Serde](https://serde.rs/) - High-performance serialization/deserialization
 - **Error Handling**: [thiserror](https://github.com/dtolnay/thiserror) - Idiomatic error types
-- **Logging**: [tracing](https://github.com/tokio-rs/tracing) - Structured, async-aware logging
+- **Logging**: [tracing](https://github.com/tokio-rs/tracing) - Structured, context-aware logging with JSON output in production
 - **Email**: [Resend](https://resend.com/) API integration for notifications
-- **Security**: Token-based authentication, CORS configuration
+- **Security**:
+  - Token-based admin authentication (Bearer tokens in headers)
+  - Configurable CORS with explicit origin allowlist
+  - Production error sanitization (hides sensitive database details)
+  - Structured audit logging for security events
 
 ### Frontend (React + TypeScript)
 - **Framework**: [React 18](https://react.dev/) with TypeScript for type safety
@@ -88,7 +92,99 @@ bun run dev
 5. Access the application:
 - Form: http://localhost:5173
 - Backend API: http://localhost:3000
-- Admin Dashboard: http://localhost:5173/admin?token=dev-token-change-in-production
+- Admin Dashboard: http://localhost:5173/admin (enter password: dev-pass)
+
+## Security Configuration
+
+### Environment Variables
+
+Create a `.env` file from `.env.example` with these required security settings:
+
+```bash
+# REQUIRED - Admin authentication
+ADMIN_TOKEN=use-a-strong-random-token-here  # Change from dev-pass!
+
+# REQUIRED - Security settings
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000  # Production: your domain
+RUST_ENV=development  # Set to "production" in production
+
+# REQUIRED - Paths and database
+DATABASE_URL=sqlite://./data/likert_form.db?mode=rwc
+PORT=3000
+TEMPLATE_PATH=./config/form-template.json
+
+# Optional - Email notifications
+RESEND_API_KEY=your-resend-api-key
+NOTIFICATION_EMAIL=admin@example.com
+```
+
+### Security Features
+
+1. **Authentication**
+   - Admin token required for all `/api/admin/*` endpoints
+   - Token passed via `Authorization: Bearer <token>` header (preferred) or query param (legacy)
+   - Frontend validates token with backend before showing admin UI
+   - Rate limiting on admin endpoints (2 requests/second) to prevent brute force
+
+2. **CORS Protection**
+   - Explicit origin allowlist via `CORS_ALLOWED_ORIGINS`
+   - No wildcards - specify exact domains
+   - Prevents cross-site request attacks
+
+3. **Security Headers**
+   - `X-Frame-Options: DENY` - Prevents clickjacking attacks
+   - `X-Content-Type-Options: nosniff` - Prevents MIME type sniffing
+   - `X-XSS-Protection: 1; mode=block` - XSS protection for older browsers
+   - `Content-Security-Policy` - Controls resource loading
+   - `Referrer-Policy: strict-origin-when-cross-origin` - Controls referrer information
+
+4. **Rate Limiting**
+   - Admin endpoints: 2 requests/second per IP (strict)
+   - Public endpoints: 20 requests/second per IP (lenient)
+   - Prevents brute force attacks and DDoS
+
+5. **Input Validation & Sanitization**
+   - Email validation with length limits and pattern checking
+   - Text input sanitization (XSS prevention)
+   - SQL injection prevention (though we use prepared statements)
+   - Numeric value validation (NaN/Infinity checks)
+   - Maximum field lengths enforced
+
+6. **Request Security**
+   - 10MB maximum request size
+   - 30 second request timeout
+   - Response compression
+
+7. **Error Handling**
+   - Production mode (`RUST_ENV=production`) hides database error details
+   - Errors logged server-side with full context
+   - Clients receive sanitized error messages
+
+8. **Structured Logging**
+   - Development: Pretty-printed logs with file locations
+   - Production: JSON logs for aggregation tools
+   - Security events logged with context
+
+9. **Data Privacy**
+   - PII stored separately in `respondents` table
+   - Email hashes for duplicate detection (SHA-256)
+   - Ability to delete PII while preserving anonymous responses
+
+### Security Best Practices
+
+⚠️ **Before Production Deployment:**
+
+1. **Change the admin token** from default `dev-pass`
+2. **Set `RUST_ENV=production`** to hide error details
+3. **Configure `CORS_ALLOWED_ORIGINS`** with your actual domain (e.g., `https://tcw_ed_review.calebbornman.com`)
+4. **Enable Cloudflare security features**:
+   - SSL/TLS encryption mode: Full (strict)
+   - Enable Rate Limiting rules
+   - Configure WAF (Web Application Firewall)
+   - Set up DDoS protection
+5. **Set up log aggregation** to monitor security events
+6. **Regular backups** of the SQLite database
+7. **Cloudflare Page Rules** for caching static assets
 
 ### Production Deployment with Coolify
 
@@ -109,15 +205,20 @@ bun run dev
 
 4. Set environment variables in the **Environment Variables** tab:
    - `ADMIN_TOKEN`: A secure random token (MUST CHANGE FROM DEFAULT!)
+   - `DATABASE_URL`: `sqlite:///app/data/likert_form.db`
+   - `PORT`: `3000`
+   - `RUST_ENV`: `production` (hides sensitive errors)
+   - `RUST_LOG`: `info` (or `warn` for less verbose)
+   - `CORS_ALLOWED_ORIGINS`: `https://tcw_ed_review.calebbornman.com`
+   - `TEMPLATE_PATH`: `/app/config/form-template.json`
    - `RESEND_API_KEY`: Your Resend API key (optional, for email notifications)
    - `NOTIFICATION_EMAIL`: Email to receive form submissions (optional)
-   - `DATABASE_URL`: `sqlite:///app/data/likert_form.db`
 
 5. Deploy the application
 
 6. After deployment, access:
-   - Form: https://your-domain.com
-   - Admin: https://your-domain.com/admin?token=YOUR_ADMIN_TOKEN
+   - Form: https://tcw_ed_review.calebbornman.com
+   - Admin: https://tcw_ed_review.calebbornman.com/admin (login with your ADMIN_TOKEN)
 
 **Note:** Without persistent storage, your database will be lost on every redeploy!
 

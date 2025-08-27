@@ -123,6 +123,79 @@ export interface AuthUser {
   email?: string;
 }
 
+// Admin API helper with secure token handling
+export class AdminApiClient {
+  private adminToken: string;
+
+  constructor(token: string) {
+    this.adminToken = token;
+  }
+
+  async request<T>(path: string, options: RequestInit = {}): Promise<T> {
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      // Security: Token in header, not URL!
+      Authorization: `Bearer ${this.adminToken}`,
+      ...(options.headers || {}),
+    };
+
+    const response = await fetch(path, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Invalid admin token");
+      }
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  // Admin-specific methods
+  async getStats(formId?: string) {
+    const path = formId
+      ? `/api/admin/stats?form_id=${formId}`
+      : `/api/admin/stats`;
+    return this.request(path);
+  }
+
+  async getResponses(formId?: string) {
+    const path = formId
+      ? `/api/admin/responses?form_id=${formId}`
+      : `/api/admin/responses`;
+    return this.request(path);
+  }
+
+  async importForm(formData: any) {
+    return this.request("/api/admin/import-form", {
+      method: "POST",
+      body: JSON.stringify(formData),
+    });
+  }
+
+  async updateFormStatus(formId: string, status: string) {
+    return this.request(`/api/admin/forms/${formId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async deleteForm(formId: string) {
+    return this.request(`/api/admin/forms/${formId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async cloneForm(formId: string) {
+    return this.request(`/api/admin/forms/${formId}/clone`, {
+      method: "POST",
+    });
+  }
+}
+
 // API Client class
 class ApiClient {
   private token: string | null = null;

@@ -109,21 +109,92 @@ pub struct RatingCount {
 
 impl SubmitFormRequest {
     pub fn validate(&self) -> Result<(), String> {
+        // Validate name
         if self.respondent_name.trim().is_empty() {
             return Err("Name is required".to_string());
         }
+        if self.respondent_name.len() > 255 {
+            return Err("Name is too long (max 255 characters)".to_string());
+        }
+        // Check for suspicious patterns in name
+        if self.respondent_name.contains('<')
+            || self.respondent_name.contains('>')
+            || self.respondent_name.contains("script")
+            || self.respondent_name.contains("javascript:")
+        {
+            return Err("Invalid characters in name".to_string());
+        }
 
+        // Validate email
         if self.respondent_email.trim().is_empty() {
             return Err("Email is required".to_string());
         }
-
-        // Basic email validation
-        if !self.respondent_email.contains('@') || !self.respondent_email.contains('.') {
+        if self.respondent_email.len() > 254 {
+            return Err("Email is too long".to_string());
+        }
+        // Enhanced email validation
+        let email = self.respondent_email.trim().to_lowercase();
+        if !email.contains('@') || email.starts_with('@') || email.ends_with('@') {
             return Err("Invalid email address".to_string());
         }
+        let parts: Vec<&str> = email.split('@').collect();
+        if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
+            return Err("Invalid email address".to_string());
+        }
+        if !parts[1].contains('.') || parts[1].starts_with('.') || parts[1].ends_with('.') {
+            return Err("Invalid email domain".to_string());
+        }
+        // Check for SQL injection attempts
+        if email.contains(';')
+            || email.contains("--")
+            || email.contains("/*")
+            || email.contains("*/")
+            || email.contains("\\")
+        {
+            return Err("Invalid characters in email".to_string());
+        }
 
+        // Validate role if provided
+        if let Some(role) = &self.role {
+            if role.len() > 100 {
+                return Err("Role is too long (max 100 characters)".to_string());
+            }
+            // Check for XSS attempts in role
+            if role.contains('<') || role.contains('>') || role.contains("script") {
+                return Err("Invalid characters in role".to_string());
+            }
+        }
+
+        // Validate answers
         if self.answers.is_empty() {
             return Err("No answers provided".to_string());
+        }
+
+        // Validate each answer
+        for answer in &self.answers {
+            // Check if the value is a string and validate it
+            if let serde_json::Value::String(text) = &answer.value {
+                if text.len() > 10000 {
+                    return Err("Answer text is too long (max 10000 characters)".to_string());
+                }
+                // Basic XSS prevention
+                if text.contains("<script")
+                    || text.contains("javascript:")
+                    || text.contains("onerror=")
+                    || text.contains("onclick=")
+                {
+                    return Err("Invalid content in answer".to_string());
+                }
+            }
+
+            // Validate numeric values are within reasonable ranges
+            if let serde_json::Value::Number(num) = &answer.value {
+                if let Some(f) = num.as_f64() {
+                    if f.is_nan() || f.is_infinite() {
+                        return Err("Invalid numeric value".to_string());
+                    }
+                }
+            }
         }
 
         Ok(())

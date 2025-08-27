@@ -7,7 +7,7 @@
   "// status": "Form status: 'draft', 'published', or 'archived' (required)",
   "// welcome_message": "Message shown when starting the form (optional)",
   "// closing_message": "Message shown after form submission (optional)",
-  
+
   "id": "example-comprehensive-form",
   "title": "Comprehensive Form Template - All Question Types",
   "description": "This template demonstrates all available question types with configuration options",
@@ -15,7 +15,7 @@
   "status": "draft",
   "welcome_message": "Welcome! This form demonstrates all available question types.",
   "closing_message": "Thank you for reviewing this comprehensive template!",
-  
+
   "// Settings": "Optional form-wide settings",
   "settings": {
     "allowAnonymous": false,
@@ -24,7 +24,7 @@
     "confidentialityNotice": "Your responses are confidential and will be aggregated.",
     "reviewPeriod": "Q1 2025"
   },
-  
+
   "// Sections": "Forms are organized into sections, each containing questions",
   "sections": [
     {
@@ -33,7 +33,7 @@
       "// title": "Section heading (required)",
       "// description": "Optional description shown under section title",
       "// position": "Display order, starting from 1 (required)",
-      
+
       "id": "rating-questions",
       "title": "Rating Questions",
       "description": "Questions that collect ratings or scale-based responses",
@@ -47,7 +47,7 @@
           "// is_required": "Whether the question must be answered (boolean)",
           "// position": "Display order within the section (required)",
           "// help_text": "Additional guidance shown below the question (optional)",
-          
+
           "id": "likert-example",
           "title": "The organization effectively achieves its goals",
           "question_type": "likert",
@@ -227,7 +227,7 @@
       ]
     }
   ],
-  
+
   "// Additional Notes": "===========================================",
   "// Feature Flags": {
     "// allowComment": "Adds optional comment field to rating/selection questions",
@@ -241,7 +241,7 @@
     "// ratingStyle": "'stars' or 'numbers' for rating questions",
     "// dateFormat": "Display format for date/time values"
   },
-  
+
   "// Import Instructions": [
     "1. Modify this template with your specific questions",
     "2. Ensure all question IDs are unique within the form",

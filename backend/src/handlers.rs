@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
     Json,
 };
@@ -10,6 +10,73 @@ use serde_json::{json, Value as JsonValue};
 use uuid::Uuid;
 
 use crate::{error::AppError, models::*, AppState};
+
+// Input validation and sanitization helper functions
+fn validate_email(email: &str) -> Result<(), AppError> {
+    // Basic email validation
+    if email.is_empty() || email.len() > 254 {
+        return Err(AppError::BadRequest("Invalid email address".to_string()));
+    }
+    if !email.contains('@') || email.starts_with('@') || email.ends_with('@') {
+        return Err(AppError::BadRequest("Invalid email address".to_string()));
+    }
+    // Prevent SQL injection via email (though we use prepared statements)
+    if email.contains(';') || email.contains("--") || email.contains("/*") {
+        return Err(AppError::BadRequest(
+            "Invalid characters in email".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+fn sanitize_text_input(input: &str, max_length: usize) -> String {
+    // Truncate to max length and trim whitespace
+    let sanitized = input
+        .chars()
+        .take(max_length)
+        .collect::<String>()
+        .trim()
+        .to_string();
+    // Remove any null bytes which can cause issues
+    sanitized.replace('\0', "")
+}
+
+/// Helper function to check admin authorization
+/// Accepts token from either Authorization header (preferred) or query parameter (legacy)
+///
+/// Security explanation:
+/// - Headers are preferred because they don't appear in logs/history
+/// - Query params are kept for backward compatibility but should be phased out
+fn check_admin_auth(
+    headers: &HeaderMap,
+    query_token: Option<&str>,
+    expected_token: &str,
+) -> Result<(), AppError> {
+    // First, try to get token from Authorization header (more secure)
+    if let Some(auth_header) = headers.get("authorization") {
+        if let Ok(auth_str) = auth_header.to_str() {
+            // Support both "Bearer TOKEN" and just "TOKEN" for flexibility
+            let token = if auth_str.starts_with("Bearer ") {
+                &auth_str[7..]
+            } else {
+                auth_str
+            };
+
+            if token == expected_token {
+                return Ok(());
+            }
+        }
+    }
+
+    // Fallback to query parameter (less secure, for backward compatibility)
+    if let Some(token) = query_token {
+        if token == expected_token {
+            return Ok(());
+        }
+    }
+
+    Err(AppError::Unauthorized("Invalid admin token".to_string()))
+}
 
 /// List all forms (including archived)
 #[allow(clippy::type_complexity)]
@@ -651,24 +718,23 @@ pub struct UpdateQuestion {
 
 #[derive(Debug, Deserialize)]
 pub struct AuthQuery {
-    pub token: String,
+    pub token: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct AdminStatsQuery {
-    pub token: String,
+    pub token: Option<String>,
     pub form_id: String,
 }
 
 /// Get form stats for admin dashboard
 pub async fn get_admin_stats(
+    headers: HeaderMap,
     Query(params): Query<AdminStatsQuery>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
-    // Check admin token
-    if params.token != state.admin_token {
-        return Err(AppError::Unauthorized("Invalid admin token".to_string()));
-    }
+    // Check admin token (from header or query param)
+    check_admin_auth(&headers, params.token.as_deref(), &state.admin_token)?;
 
     // Get stats for specific form
     get_form_stats_anonymous(Path(params.form_id), State(state)).await
@@ -676,13 +742,12 @@ pub async fn get_admin_stats(
 
 /// Get responses for admin (with PII)
 pub async fn get_admin_responses(
+    headers: HeaderMap,
     Query(params): Query<AdminStatsQuery>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
-    // Check admin token
-    if params.token != state.admin_token {
-        return Err(AppError::Unauthorized("Invalid admin token".to_string()));
-    }
+    // Check admin token (from header or query param)
+    check_admin_auth(&headers, params.token.as_deref(), &state.admin_token)?;
 
     // Fetch responses WITHOUT PII
     let responses_raw: Vec<(String, String, Option<String>, String)> = sqlx::query_as(
@@ -751,14 +816,18 @@ pub async fn get_admin_responses(
 
 /// Import a form from JSON configuration (admin only)
 pub async fn import_form(
+    headers: HeaderMap,
     Query(auth): Query<AuthQuery>,
     State(state): State<AppState>,
     Json(form_data): Json<ImportFormRequest>,
 ) -> Result<impl IntoResponse, AppError> {
-    // Check admin token
-    if auth.token != state.admin_token {
-        return Err(AppError::Unauthorized("Invalid admin token".to_string()));
-    }
+    // Check admin token (from header or query param)
+    check_admin_auth(&headers, auth.token.as_deref(), &state.admin_token)?;
+
+    // TODO: For multi-tenancy, add:
+    // - tenant_id to forms table
+    // - created_by user_id for audit trail
+    // - Check user has permission to create forms in this tenant
 
     // Validate unique question IDs within the form
     let mut question_ids = std::collections::HashSet::new();
@@ -947,7 +1016,7 @@ pub async fn update_form(
     Json(form_data): Json<UpdateFormRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     // Check admin token
-    if auth.token != state.admin_token {
+    if auth.token.as_deref() != Some(state.admin_token.as_str()) {
         return Err(AppError::Unauthorized("Invalid admin token".to_string()));
     }
 
@@ -1094,7 +1163,7 @@ pub async fn clone_form(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
     // Check admin token
-    if auth.token != state.admin_token {
+    if auth.token.as_deref() != Some(state.admin_token.as_str()) {
         return Err(AppError::Unauthorized("Invalid admin token".to_string()));
     }
 
@@ -1224,7 +1293,7 @@ pub async fn update_form_status(
     Json(status_update): Json<StatusUpdateRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     // Check admin token
-    if auth.token != state.admin_token {
+    if auth.token.as_deref() != Some(state.admin_token.as_str()) {
         return Err(AppError::Unauthorized("Invalid admin token".to_string()));
     }
 
@@ -1269,7 +1338,7 @@ pub async fn delete_form(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
     // Check admin token
-    if auth.token != state.admin_token {
+    if auth.token.as_deref() != Some(state.admin_token.as_str()) {
         return Err(AppError::Unauthorized("Invalid admin token".to_string()));
     }
 
